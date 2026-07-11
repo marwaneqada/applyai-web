@@ -1,36 +1,107 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+<div align="center">
 
-## Getting Started
+<img src="public/applyai-logo.png" alt="ApplyAI" width="340" />
 
-First, run the development server:
+### Tailor every resume to the job — before you apply.
+
+The web app for **ApplyAI**: upload a résumé, analyze it against a job with AI, rewrite it, export a role‑ready PDF, and track every application on a kanban board.
+
+![Next.js](https://img.shields.io/badge/Next.js-16-000000?logo=nextdotjs&logoColor=white)
+![React](https://img.shields.io/badge/React-19-20232a?logo=react&logoColor=61dafb)
+![TypeScript](https://img.shields.io/badge/TypeScript-5-3178c6?logo=typescript&logoColor=white)
+![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-4-38bdf8?logo=tailwindcss&logoColor=white)
+![Framer Motion](https://img.shields.io/badge/Framer_Motion-12-ff4d8d?logo=framer&logoColor=white)
+
+**Backend API →** [marwaneqada/applyai-api](https://github.com/marwaneqada/applyai-api)
+
+</div>
+
+---
+
+## ✨ Overview
+
+ApplyAI helps job seekers **tailor each application** instead of sending the same résumé everywhere. This repository is the **frontend** — a Next.js 16 App Router single‑page app that talks to the [ApplyAI Laravel API](https://github.com/marwaneqada/applyai-api) over a typed REST client with token auth.
+
+The flow: **upload a résumé → analyze it against a job description → review scores, gaps, rewrites & a cover letter → export a tailored PDF → track the application.**
+
+## 🚀 Features
+
+**Marketing**
+- Animated, responsive landing page with a scroll‑reveal narrative and product mockups
+
+**Authenticated app**
+- 🔐 **Auth** — email/password login & register (token sessions via Laravel Sanctum)
+- 📄 **Résumés** — drag‑&‑drop PDF upload (≤5 MB) with instant parse status, list & delete
+- 🧠 **AI analysis** — match score with keyword / experience / skills breakdowns, matched vs missing keywords, strengths, weaknesses, a severity‑tagged gap analysis, rewritten bullet points, and a generated cover letter
+- 🎯 **Tailored PDF export** — Harvard, Modern, or Minimal templates
+- 🗂️ **Application tracker** — kanban board (Saved → Applied → Interview → Offer → Rejected) with **drag‑and‑drop**, optimistic updates + rollback, and stats
+- 🧭 **Dashboard** — workspace overview with recent analyses and pipeline
+- 💡 **Guided tour** — an interactive, cross‑page onboarding walkthrough
+
+## 🧱 Tech stack
+
+| Area | Choice |
+| --- | --- |
+| Framework | Next.js 16 (App Router, React 19) |
+| Language | TypeScript |
+| Styling | Tailwind CSS v4 |
+| Animation | Framer Motion |
+| Auth | Laravel Sanctum bearer tokens (stored client‑side) |
+| Data | Typed `fetch` client in `src/lib/api.ts` |
+
+## 📸 Screenshots
+
+> Drop images in `public/screenshots/` and reference them here, e.g. `![Landing](public/screenshots/landing.png)`.
+
+## 🏁 Getting started
+
+**Prerequisites:** Node.js 18+ and a running [ApplyAI API](https://github.com/marwaneqada/applyai-api).
 
 ```bash
+# 1. Install dependencies
+npm install
+
+# 2. Point the app at your API (create .env.local)
+echo "NEXT_PUBLIC_API_URL=http://localhost:8000" > .env.local
+
+# 3. Run the dev server
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### Environment variables
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+| Variable | Description |
+| --- | --- |
+| `NEXT_PUBLIC_API_URL` | Base URL of the ApplyAI API (the client appends `/api`). |
 
-## Learn More
+## 📜 Scripts
 
-To learn more about Next.js, take a look at the following resources:
+```bash
+npm run dev     # start the dev server
+npm run build   # production build
+npm run start   # serve the production build
+npm run lint    # lint
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## 🗂️ Project structure
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+```txt
+src/
+  app/                 # App Router routes (landing, /login, /register, /app/*)
+  components/
+    landing/           # landing-page sections
+    app/               # authenticated app views (resumes, analyses, applications, tour)
+    brand/             # shared logo
+    ui/                # shared primitives
+  contexts/            # auth context
+  lib/                 # typed API client
+public/                # logo, icon, static assets
+```
 
-## Deploy on Vercel
+## 🔗 Related
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+- **API / backend:** [marwaneqada/applyai-api](https://github.com/marwaneqada/applyai-api)
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+<div align="center"><sub>Built with Next.js · TypeScript · Tailwind CSS</sub></div>
