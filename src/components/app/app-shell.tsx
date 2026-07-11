@@ -5,6 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, type ReactNode } from "react";
 import { useAuth } from "@/contexts/auth-context";
 import { ApplyAiLogo } from "@/components/auth/applyai-logo";
+import { useTour } from "@/components/app/tour/tour-context";
 
 const navItems = [
   { href: "/app", label: "Workspace" },
@@ -26,6 +27,7 @@ function LoadingScreen() {
 
 export function AppShell({ children }: { children: ReactNode }) {
   const { logout, status, user } = useAuth();
+  const { start: startTour } = useTour();
   const pathname = usePathname();
   const router = useRouter();
 
@@ -77,6 +79,13 @@ export function AppShell({ children }: { children: ReactNode }) {
             <span className="hidden max-w-48 truncate text-sm font-semibold text-[#405047] sm:inline">
               {user?.name}
             </span>
+            <button
+              className="hidden h-10 items-center justify-center rounded-full px-4 text-sm font-semibold text-[#405047] transition hover:bg-[#eff3df] hover:text-[#062b1f] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#a6f20f] sm:inline-flex"
+              onClick={startTour}
+              type="button"
+            >
+              Guide
+            </button>
             <button
               className="inline-flex h-10 items-center justify-center rounded-full border border-[#d8d5c8] bg-[#fbfaf4] px-5 text-sm font-semibold text-[#062b1f] shadow-sm transition hover:border-[#b7b29f] hover:bg-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#a6f20f]"
               onClick={handleLogout}
