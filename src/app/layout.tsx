@@ -17,6 +17,9 @@ export const metadata: Metadata = {
   title: "ApplyAI | Resume Tailoring and Application Tracker",
   description:
     "ApplyAI helps applicants upload a resume, analyze the job match, rewrite bullets, generate a cover letter, export a PDF, and track applications.",
+  icons: {
+    icon: "/applyai-icon.png",
+  },
 };
 
 export default function RootLayout({
