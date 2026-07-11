@@ -1,9 +1,5 @@
 import type { ReactNode } from "react";
-import {
-  PRODUCT_TABS,
-  REVIEW_NOTES,
-  SCORE_BREAKDOWN,
-} from "@/constants/landing";
+import { REVIEW_NOTES, SCORE_BREAKDOWN } from "@/constants/landing";
 
 type StoryMockupVariant = "intake" | "job" | "score" | "rewrite" | "export" | "kanban";
 
@@ -81,7 +77,7 @@ export function HeroProductMockup({ score = "91%" }: { score?: ReactNode }) {
             ApplyAI workspace
           </p>
           <span className="hero-status-live hidden rounded-full bg-[#eaf8d6] px-3 py-1 text-xs font-semibold text-[#315000] sm:inline-flex">
-            marwane-resume.pdf
+            resume.pdf
           </span>
         </div>
 
@@ -165,7 +161,7 @@ function IntakeMockup() {
           </div>
           <div className="min-w-0 flex-1">
             <p className="truncate text-xl font-semibold text-[#062b1f]">
-              marwane-resume.pdf
+              resume.pdf
             </p>
             <div className="mt-3 grid grid-cols-3 gap-4 text-sm">
               <div>
@@ -194,7 +190,7 @@ function IntakeMockup() {
             </span>
           </div>
           <div className="mt-4 rounded-[14px] bg-white px-4 py-3 text-sm leading-6 text-[#20332a]">
-            Resume uploaded: marwane-resume.pdf. Parse status: success.
+            Resume uploaded: resume.pdf. Parse status: success.
           </div>
         </div>
       </div>
@@ -245,7 +241,7 @@ function JobDescriptionMockup() {
       </div>
 
       <div className="mx-auto mt-8 flex max-w-[420px] items-center justify-between rounded-full border border-white/20 bg-white/10 px-5 py-3 text-sm text-white">
-        <span>Compare against marwane-resume.pdf</span>
+        <span>Compare against resume.pdf</span>
         <span className="grid h-8 w-8 place-items-center rounded-full bg-white text-[#062b1f]">
           Go
         </span>
@@ -454,86 +450,102 @@ export function StoryProductMockup({
   );
 }
 
+const BOARD_NAV = ["Workspace", "Resumes", "Analyses", "Applications"] as const;
+
+const BOARD_COLUMNS = [
+  {
+    title: "Saved",
+    dot: "bg-[#8a9385]",
+    cards: [
+      { company: "Acme", role: "Backend Developer", meta: "Jul 9, 2026" },
+      { company: "Northwind", role: "Frontend Engineer", meta: "Jul 7, 2026" },
+    ],
+  },
+  {
+    title: "Applied",
+    dot: "bg-[#2f80b8]",
+    cards: [
+      { company: "Globex", role: "Laravel Developer", meta: "Sarah Kim" },
+      { company: "Umbrella", role: "SaaS API Engineer", meta: "Jul 2, 2026" },
+    ],
+  },
+  {
+    title: "Interview",
+    dot: "bg-[#c69220]",
+    cards: [{ company: "Initech", role: "Platform Developer", meta: "Jun 28, 2026" }],
+  },
+  {
+    title: "Offer",
+    dot: "bg-[#4a8f16]",
+    cards: [{ company: "Hooli", role: "Product Engineer", meta: "James Reed" }],
+  },
+  {
+    title: "Rejected",
+    dot: "bg-[#b3402f]",
+    cards: [{ company: "Stark", role: "Senior PHP Engineer", meta: "Jun 20, 2026" }],
+  },
+] as const;
+
 export function FullProductMockup() {
   return (
-    <div className="overflow-hidden rounded-[32px] border border-white/10 bg-[#f7f5ec] shadow-[0_34px_100px_rgba(0,0,0,0.26)]">
-      <div className="flex flex-col gap-4 border-b border-[#e6e2d5] bg-white px-5 py-4 lg:flex-row lg:items-center lg:justify-between">
-        <div className="flex items-center gap-4">
-          <WindowControls />
-          <p className="text-sm font-semibold text-[#062b1f]">ApplyAI applications</p>
+    <div className="overflow-hidden rounded-[32px] border border-white/10 bg-[#fbfaf4] shadow-[0_34px_100px_rgba(0,0,0,0.26)]">
+      <div className="flex flex-col gap-4 border-b border-[#e8e4d8] bg-[#fbfaf4] px-5 py-4 lg:flex-row lg:items-center lg:justify-between">
+        <div className="flex items-center gap-3">
+          <span className="grid h-8 w-8 place-items-center rounded-lg border border-[#154b38] bg-[#062b1f] text-xs font-semibold text-[#a6f20f]">
+            A
+          </span>
+          <p className="text-sm font-semibold text-[#062b1f]">ApplyAI</p>
         </div>
         <div className="flex flex-wrap gap-2">
-          {PRODUCT_TABS.map((tab, index) => (
+          {BOARD_NAV.map((item) => (
             <span
-              className={`rounded-full px-3 py-1.5 text-xs font-semibold ${
-                index === 3
+              className={`rounded-full px-4 py-1.5 text-xs font-semibold ${
+                item === "Applications"
                   ? "bg-[#062b1f] text-[#f7f5ec]"
-                  : "bg-[#eff3df] text-[#405047]"
+                  : "text-[#405047]"
               }`}
-              key={tab}
+              key={item}
             >
-              {tab}
+              {item}
             </span>
           ))}
         </div>
       </div>
 
-      <div className="bg-[#fbfaf4] p-5">
-        <div className="grid gap-4 lg:grid-cols-5">
-          {[
-            {
-              title: "Saved",
-              count: "4",
-              cards: ["Backend Developer", "Frontend Engineer"],
-            },
-            {
-              title: "Applied",
-              count: "3",
-              cards: ["Acme Laravel role", "SaaS API Engineer"],
-            },
-            {
-              title: "Interview",
-              count: "1",
-              cards: ["Platform Developer"],
-            },
-            {
-              title: "Offer",
-              count: "1",
-              cards: ["Product Engineer"],
-            },
-            {
-              title: "Rejected",
-              count: "1",
-              cards: ["Legacy PHP role"],
-            },
-          ].map((column) => (
+      <div className="p-5">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+          {BOARD_COLUMNS.map((column) => (
             <section
-              className="min-h-[300px] rounded-[22px] border border-[#e6e2d5] bg-white p-4"
+              className="min-h-[220px] rounded-[24px] border border-[#e6e2d6] bg-[#f6f4ec] p-3"
               key={column.title}
             >
-              <div className="flex items-center justify-between">
-                <h3 className="text-sm font-semibold text-[#062b1f]">{column.title}</h3>
-                <span className="rounded-full bg-[#eff3df] px-2.5 py-1 text-xs font-semibold text-[#315000]">
-                  {column.count}
+              <div className="flex items-center justify-between px-1 py-1.5">
+                <div className="flex items-center gap-2">
+                  <span className={`h-2 w-2 rounded-full ${column.dot}`} />
+                  <h3 className="text-sm font-semibold text-[#062b1f]">
+                    {column.title}
+                  </h3>
+                </div>
+                <span className="rounded-full bg-white px-2 py-0.5 text-xs font-semibold text-[#657167]">
+                  {column.cards.length}
                 </span>
               </div>
-              <div className="mt-4 grid gap-3">
-                {column.cards.map((card, index) => (
+              <div className="mt-1 grid gap-2.5">
+                {column.cards.map((card) => (
                   <div
-                    className={`rounded-[18px] border p-4 ${
-                      column.title === "Applied" && index === 0
-                        ? "border-[#d9e9c5] bg-[#f2ffd4]"
-                        : "border-[#e6e2d5] bg-[#fbfaf4]"
-                    }`}
-                    key={card}
+                    className="rounded-2xl border border-[#e1ded1] bg-white p-3.5 shadow-sm"
+                    key={card.role}
                   >
-                    <p className="text-sm font-semibold text-[#062b1f]">{card}</p>
-                    <p className="mt-2 text-xs leading-5 text-[#657167]">
-                      Job URL, notes, recruiter contact, and applied date saved.
+                    <p className="truncate text-sm font-semibold text-[#062b1f]">
+                      {card.company}
                     </p>
-                    <div className="mt-4 flex items-center justify-between text-xs font-semibold text-[#405047]">
-                      <span>91% match</span>
-                      <span>PDF ready</span>
+                    <p className="mt-0.5 truncate text-xs text-[#657167]">
+                      {card.role}
+                    </p>
+                    <div className="mt-2.5">
+                      <span className="rounded-full bg-[#f4f2ea] px-2 py-0.5 text-[11px] font-medium text-[#657167]">
+                        {card.meta}
+                      </span>
                     </div>
                   </div>
                 ))}

@@ -1,4 +1,3 @@
-import { Button } from "@/components/ui/button";
 import { FullProductMockup } from "@/components/landing/product-mockups";
 import { Reveal } from "@/components/landing/reveal";
 
@@ -21,11 +20,6 @@ export function ProductPreviewSection() {
               Save jobs, move cards across stages, and keep notes, recruiter contacts,
               job URLs, applied dates, and tailored PDFs in one place.
             </p>
-            <div className="mt-6">
-              <Button className="h-12 bg-[#a6f20f] px-7 text-[#062b1f] hover:bg-[#c3ff45]" href="#final-cta">
-                View kanban board
-              </Button>
-            </div>
           </div>
         </Reveal>
 

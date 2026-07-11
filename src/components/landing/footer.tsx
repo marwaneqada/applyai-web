@@ -1,3 +1,4 @@
+import { AppLogo } from "@/components/brand/app-logo";
 import { Reveal, RevealItem, StaggerReveal } from "@/components/landing/reveal";
 
 const footerGroups = [
@@ -18,11 +19,11 @@ const footerGroups = [
     ],
   },
   {
-    title: "Company",
+    title: "Get started",
     links: [
-      { label: "Contact", href: "mailto:hello@applyai.com" },
-      { label: "Start tailoring", href: "#final-cta" },
-      { label: "Sign in", href: "#product" },
+      { label: "Create account", href: "/register" },
+      { label: "Sign in", href: "/login" },
+      { label: "Back to top", href: "#top" },
     ],
   },
 ] as const;
@@ -33,12 +34,7 @@ export function Footer() {
       <div className="mx-auto max-w-7xl">
         <Reveal className="grid gap-12 lg:grid-cols-[0.8fr_1.2fr]" delay={0.08}>
           <div>
-            <a className="inline-flex items-center gap-3" href="#top" aria-label="ApplyAI home">
-              <span className="grid h-10 w-10 place-items-center rounded-xl border border-[#154b38] bg-[#062b1f] text-sm font-semibold text-[#a6f20f]">
-                A
-              </span>
-              <span className="text-xl font-semibold text-[#062b1f]">ApplyAI</span>
-            </a>
+            <AppLogo href="#top" />
             <p className="mt-5 max-w-sm text-sm leading-6 text-[#657167]">
               Resume tailoring for applicants who want each job application
               matched, rewritten, exported, and tracked in one place.
@@ -68,16 +64,16 @@ export function Footer() {
         </Reveal>
 
         <Reveal className="mt-12 flex flex-col gap-4 border-t border-[#e8e4d8] pt-6 text-sm text-[#657167] sm:flex-row sm:items-center sm:justify-between" delay={0.1} y={12}>
-          <p>(c) 2026 ApplyAI. All rights reserved.</p>
+          <p>© 2026 ApplyAI. All rights reserved.</p>
           <div className="flex gap-5">
-            <a className="transition hover:text-[#062b1f]" href="#top">
-              Privacy
+            <a className="transition hover:text-[#062b1f]" href="#story">
+              Workflow
             </a>
-            <a className="transition hover:text-[#062b1f]" href="#top">
-              Terms
+            <a className="transition hover:text-[#062b1f]" href="#features">
+              Features
             </a>
-            <a className="transition hover:text-[#062b1f]" href="#top">
-              Security
+            <a className="transition hover:text-[#062b1f]" href="#product">
+              Product
             </a>
           </div>
         </Reveal>

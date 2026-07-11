@@ -60,7 +60,7 @@ function StoryTextBlock({
       initial={shouldReduceMotion ? false : { opacity: 0, y: 20 }}
       ref={(node) => setStepRef(index, node)}
       transition={{ duration: 0.42, ease: [0.22, 1, 0.36, 1] }}
-      viewport={{ once: false, amount: 0.2 }}
+      viewport={{ once: true, amount: 0.2 }}
       whileInView={shouldReduceMotion ? undefined : { opacity: 1, y: 0 }}
     >
       <StepDots activeIndex={index} />
@@ -221,7 +221,7 @@ export function StorytellingSection() {
             initial={shouldReduceMotion ? false : { opacity: 0, y: 20 }}
             key={item.title}
             transition={transition}
-            viewport={{ once: false, amount: 0.24 }}
+            viewport={{ once: true, amount: 0.24 }}
             whileInView={shouldReduceMotion ? undefined : { opacity: 1, y: 0 }}
           >
             <div className="mb-5 rounded-[28px] border border-[#e1ded1] bg-white p-6">

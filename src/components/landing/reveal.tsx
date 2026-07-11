@@ -26,7 +26,7 @@ export function Reveal({
       className={className}
       initial={shouldReduceMotion ? false : { opacity: 0, y }}
       transition={{ ...reveal, delay }}
-      viewport={{ once: false, amount: 0.22 }}
+      viewport={{ once: true, amount: 0.22 }}
       whileInView={shouldReduceMotion ? undefined : { opacity: 1, y: 0 }}
     >
       {children}
@@ -58,7 +58,7 @@ export function StaggerReveal({
           },
         },
       }}
-      viewport={{ once: false, amount: 0.08 }}
+      viewport={{ once: true, amount: 0.08 }}
       whileInView={shouldReduceMotion ? undefined : "visible"}
     >
       {children}

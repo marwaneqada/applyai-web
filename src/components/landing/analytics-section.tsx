@@ -26,7 +26,7 @@ function RevealCard({
     <motion.div
       initial={shouldReduceMotion ? false : { opacity: 0, scale: 0.985, y: 22 }}
       transition={{ ...revealTransition, delay }}
-      viewport={{ once: false, amount: 0.35 }}
+      viewport={{ once: true, amount: 0.35 }}
       whileInView={
         shouldReduceMotion ? undefined : { opacity: 1, scale: 1, y: 0 }
       }
@@ -61,7 +61,7 @@ function PerformanceCard() {
           </span>
           <div>
             <p className="text-xs text-[#a8b9a6]">Resume</p>
-            <p className="text-sm font-semibold text-white">marwane-resume.pdf</p>
+            <p className="text-sm font-semibold text-white">resume.pdf</p>
           </div>
         </div>
         <div className="text-right">
@@ -220,10 +220,10 @@ export function AnalyticsSection() {
             </RevealCard>
             <div className="grid gap-4 sm:grid-cols-2">
               <RevealCard delay={0.12}>
-                <StatCard label="Resumes analyzed" value="128" />
+                <StatCard label="Match scores" value="4" />
               </RevealCard>
               <RevealCard delay={0.18}>
-                <StatCard label="PDFs generated" value="43" />
+                <StatCard label="PDF templates" value="3" />
               </RevealCard>
             </div>
             <RevealCard delay={0.24}>
@@ -259,10 +259,10 @@ export function AnalyticsSection() {
             style={shouldReduceMotion ? undefined : { y: floatSoft }}
           >
             <RevealCard delay={0.16}>
-              <StatCard label="Resumes analyzed" value="128" />
+              <StatCard label="Match scores" value="4" />
             </RevealCard>
             <RevealCard delay={0.24}>
-              <StatCard label="PDFs generated" value="43" />
+              <StatCard label="PDF templates" value="3" />
             </RevealCard>
           </motion.div>
 

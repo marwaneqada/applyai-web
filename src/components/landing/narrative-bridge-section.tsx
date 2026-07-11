@@ -41,7 +41,7 @@ export function NarrativeBridgeSection() {
                       <p className="text-sm font-semibold text-[#062b1f]">
                         Parsed resume
                       </p>
-                      <p className="text-xs text-[#657167]">marwane-resume.pdf</p>
+                      <p className="text-xs text-[#657167]">resume.pdf</p>
                     </div>
                   </div>
                   <div className="mt-5 grid gap-3">

@@ -129,7 +129,7 @@ export function HeroSection() {
               className="mt-8 flex flex-col gap-3 sm:flex-row"
               variants={copyItem}
             >
-              <Button className="h-12 px-7" href="#final-cta">
+              <Button className="h-12 px-7" href="/register">
                 Start tailoring
               </Button>
               <Button className="h-12 px-7" href="#story" variant="secondary">

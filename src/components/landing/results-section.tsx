@@ -69,9 +69,9 @@ export function ResultsSection() {
     <section id="results" className="bg-[#fbfaf4] px-5 py-16 sm:px-6 lg:px-8 lg:py-20">
       <div className="mx-auto max-w-7xl">
         <Reveal className="max-w-4xl">
-          <p className="text-sm font-semibold text-[#588100]">Measured outcomes</p>
+          <p className="text-sm font-semibold text-[#588100]">What you get</p>
           <h2 className="mt-4 text-4xl font-semibold leading-tight text-[#062b1f] sm:text-5xl lg:text-6xl">
-            Measurable results from Day One
+            Everything each analysis gives you.
           </h2>
         </Reveal>
 

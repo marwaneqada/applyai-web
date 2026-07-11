@@ -1,7 +1,9 @@
 "use client";
 
 import { motion, useReducedMotion } from "framer-motion";
+import Link from "next/link";
 import { NAV_ITEMS } from "@/constants/landing";
+import { AppLogo } from "@/components/brand/app-logo";
 import { Button } from "@/components/ui/button";
 
 export function PublicHeader() {
@@ -15,12 +17,7 @@ export function PublicHeader() {
       transition={{ duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
     >
       <div className="mx-auto flex h-20 w-full max-w-7xl items-center justify-between px-5 sm:px-6 lg:px-8">
-        <a className="flex items-center gap-3" href="#top" aria-label="ApplyAI home">
-          <span className="grid h-9 w-9 place-items-center rounded-xl border border-[#154b38] bg-[#062b1f] text-sm font-semibold text-[#a6f20f]">
-            A
-          </span>
-          <span className="text-lg font-semibold text-[#062b1f]">ApplyAI</span>
-        </a>
+        <AppLogo href="#top" />
 
         <nav className="hidden items-center gap-8 md:flex" aria-label="Primary">
           {NAV_ITEMS.map((item) => (
@@ -35,17 +32,15 @@ export function PublicHeader() {
         </nav>
 
         <div className="flex items-center gap-3">
-          <a
+          <Link
             className="hidden text-sm font-medium text-[#405047] transition hover:text-[#062b1f] sm:inline-flex"
-            href="#product"
+            href="/login"
           >
             Sign in
-          </a>
-          <div className="hidden sm:block">
-            <Button className="h-10 px-5" href="#final-cta">
-              Start tailoring
-            </Button>
-          </div>
+          </Link>
+          <Button className="h-10 px-5" href="/register">
+            Get started
+          </Button>
         </div>
       </div>
     </motion.header>

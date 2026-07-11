@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Reveal } from "@/components/landing/reveal";
 
@@ -19,13 +20,16 @@ export function FinalCtaSection() {
           Upload your resume, paste the job description, improve the match, export
           the PDF, and save the application to your kanban board.
         </p>
-        <div className="mt-8 flex justify-center">
-          <Button
-            className="h-12 bg-[#a6f20f] px-8 text-[#062b1f] hover:bg-[#c3ff45]"
-            href="mailto:hello@applyai.com?subject=Start%20tailoring%20my%20next%20application"
-          >
-            Start tailoring
+        <div className="mt-8 flex flex-col items-center gap-4">
+          <Button className="h-12 px-8" href="/register" variant="secondary">
+            Start for free
           </Button>
+          <Link
+            className="text-sm font-semibold text-[#cbd8c5] transition hover:text-white"
+            href="/login"
+          >
+            Already have an account? Sign in
+          </Link>
         </div>
       </Reveal>
     </section>

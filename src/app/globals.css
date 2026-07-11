@@ -31,6 +31,11 @@ html {
   background: var(--background);
 }
 
+/* Keep anchored sections clear of the sticky header when jumped to. */
+section[id] {
+  scroll-margin-top: 6rem;
+}
+
 @keyframes hero-live-dot-pulse {
   0%,
   100% {
