@@ -10,8 +10,12 @@ import {
   type FormEvent,
   type HTMLInputTypeAttribute,
 } from "react";
-import { ApiError, type FieldErrors } from "@/lib/api";
-import { safeRedirectPath } from "@/lib/routing";
+import {
+  ApiError,
+  INVALID_CREDENTIALS_MESSAGE,
+  type FieldErrors,
+} from "@/lib/api";
+import { accountHomePath, safeRedirectPath } from "@/lib/routing";
 import { useAuth } from "@/contexts/auth-context";
 import { ApplyAiLogo } from "@/components/auth/applyai-logo";
 
@@ -173,7 +177,7 @@ export function AuthPage({
   const router = useRouter();
   const shouldReduceMotion = useReducedMotion();
   const reduceMotion = shouldReduceMotion === true;
-  const { login, register, status } = useAuth();
+  const { login, register, status, user } = useAuth();
   const [values, setValues] = useState<FormValues>({
     confirmPassword: "",
     email: "",
@@ -210,10 +214,10 @@ export function AuthPage({
   );
 
   useEffect(() => {
-    if (status === "authenticated") {
-      router.replace("/app");
+    if (status === "authenticated" && user) {
+      router.replace(accountHomePath(user.account_type));
     }
-  }, [router, status]);
+  }, [router, status, user]);
 
   function updateField(name: FieldName, value: string) {
     setValues((current) => ({ ...current, [name]: value }));
@@ -235,24 +239,32 @@ export function AuthPage({
     setIsSubmitting(true);
 
     try {
-      if (mode === "login") {
-        await login({
+      const nextUser = mode === "login"
+        ? await login({
           email: values.email.trim(),
           password: values.password,
-        });
-      } else {
-        await register({
+        })
+        : await register({
           email: values.email.trim(),
           name: values.name.trim(),
           password: values.password,
         });
-      }
 
-      router.replace(safeRedirectPath(redirectTo));
+      router.replace(
+        nextUser.account_type === "candidate"
+          ? safeRedirectPath(redirectTo)
+          : accountHomePath(nextUser.account_type),
+      );
     } catch (error) {
       if (error instanceof ApiError) {
-        setFieldErrors(error.fieldErrors);
-        setFormError(error.message);
+        const isInvalidCredentials =
+          mode === "login" &&
+          error.fieldErrors.email === INVALID_CREDENTIALS_MESSAGE;
+
+        setFieldErrors(isInvalidCredentials ? {} : error.fieldErrors);
+        setFormError(
+          isInvalidCredentials ? INVALID_CREDENTIALS_MESSAGE : error.message,
+        );
       } else {
         setFormError("Network trouble interrupted the request. Please try again.");
       }
@@ -323,7 +335,10 @@ export function AuthPage({
         </motion.div>
 
         {formError ? (
-          <div className="mt-6 rounded-2xl border border-[#efc8bf] bg-[#fff7f4] px-4 py-3 text-sm font-medium leading-6 text-[#8b281f]">
+          <div
+            className="mt-6 rounded-2xl border border-[#efc8bf] bg-[#fff7f4] px-4 py-3 text-sm font-medium leading-6 text-[#8b281f]"
+            role="alert"
+          >
             {formError}
           </div>
         ) : null}

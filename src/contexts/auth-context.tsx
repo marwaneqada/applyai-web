@@ -24,10 +24,10 @@ type AuthStatus = "loading" | "authenticated" | "unauthenticated";
 
 type AuthContextValue = {
   clearSession: () => void;
-  login: (payload: LoginRequest) => Promise<void>;
+  login: (payload: LoginRequest) => Promise<AuthUser>;
   logout: () => Promise<void>;
   refreshUser: () => Promise<AuthUser | null>;
-  register: (payload: RegisterRequest) => Promise<void>;
+  register: (payload: RegisterRequest) => Promise<AuthUser>;
   status: AuthStatus;
   token: string | null;
   user: AuthUser | null;
@@ -142,6 +142,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     async (payload: LoginRequest) => {
       const response = await loginRequest(payload);
       persistSession(response.token, response.user);
+      return response.user;
     },
     [persistSession],
   );
@@ -150,6 +151,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     async (payload: RegisterRequest) => {
       const response = await registerRequest(payload);
       persistSession(response.token, response.user);
+      return response.user;
     },
     [persistSession],
   );

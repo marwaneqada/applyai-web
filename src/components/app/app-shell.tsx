@@ -6,12 +6,14 @@ import { useEffect, type ReactNode } from "react";
 import { useAuth } from "@/contexts/auth-context";
 import { ApplyAiLogo } from "@/components/auth/applyai-logo";
 import { useTour } from "@/components/app/tour/tour-context";
+import { accountHomePath } from "@/lib/routing";
 
 const navItems = [
   { href: "/app", label: "Workspace" },
   { href: "/app/resumes", label: "Resumes" },
   { href: "/app/analyses", label: "Analyses" },
   { href: "/app/applications", label: "Applications" },
+  { href: "/app/profile", label: "Profile" },
 ] as const;
 
 function LoadingScreen() {
@@ -40,12 +42,18 @@ export function AppShell({ children }: { children: ReactNode }) {
     router.replace(`/login?redirect=${encodeURIComponent(destination)}`);
   }, [router, status]);
 
+  useEffect(() => {
+    if (status === "authenticated" && user && user.account_type !== "candidate") {
+      router.replace(accountHomePath(user.account_type));
+    }
+  }, [router, status, user]);
+
   async function handleLogout() {
     await logout();
     router.replace("/login");
   }
 
-  if (status !== "authenticated") {
+  if (status !== "authenticated" || user?.account_type !== "candidate") {
     return <LoadingScreen />;
   }
 

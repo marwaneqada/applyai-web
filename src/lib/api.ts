@@ -1,7 +1,13 @@
+export type AccountType = "candidate" | "hr";
+
+export const INVALID_CREDENTIALS_MESSAGE =
+  "The email or password you entered is incorrect.";
+
 export type AuthUser = {
   id: number;
   name: string;
   email: string;
+  account_type: AccountType;
 };
 
 export type AuthResponse = {
@@ -22,6 +28,33 @@ export type RegisterRequest = {
   name: string;
   email: string;
   password: string;
+};
+
+export type CandidateProfile = {
+  id: number;
+  name: string;
+  email: string;
+  account_type: "candidate";
+  headline: string | null;
+  phone: string | null;
+  location: string | null;
+  professional_summary: string | null;
+  linkedin_url: string | null;
+  github_url: string | null;
+  portfolio_url: string | null;
+  created_at: string | null;
+  updated_at: string | null;
+};
+
+export type UpdateCandidateProfilePayload = {
+  name?: string;
+  headline?: string | null;
+  phone?: string | null;
+  location?: string | null;
+  professional_summary?: string | null;
+  linkedin_url?: string | null;
+  github_url?: string | null;
+  portfolio_url?: string | null;
 };
 
 export type ResumeParseStatus = "pending" | "success" | "failed";
@@ -188,7 +221,7 @@ function safeFieldMessage(field: string, message: string | undefined, status: nu
     }
 
     if (status === 422 && lowerMessage.includes("credential")) {
-      return "We could not verify those details.";
+      return INVALID_CREDENTIALS_MESSAGE;
     }
 
     return "Enter a valid email address.";
@@ -221,6 +254,26 @@ function safeFieldMessage(field: string, message: string | undefined, status: nu
 
   if (field === "company_name") {
     return "Enter the company name.";
+  }
+
+  if (field === "headline") {
+    return "Keep your headline to 160 characters or fewer.";
+  }
+
+  if (field === "phone") {
+    return "Keep your phone number to 30 characters or fewer.";
+  }
+
+  if (field === "location") {
+    return "Keep your location to 255 characters or fewer.";
+  }
+
+  if (field === "professional_summary") {
+    return "Keep your summary to 2,000 characters or fewer.";
+  }
+
+  if (["linkedin_url", "github_url", "portfolio_url"].includes(field)) {
+    return "Enter a complete http:// or https:// URL, or leave it blank.";
   }
 
   if (field === "contact_email") {
@@ -377,6 +430,34 @@ export function logoutRequest(token: string) {
     method: "POST",
     token,
   });
+}
+
+export async function getCandidateProfile(token: string) {
+  const response = await apiRequest<ResourceResponse<CandidateProfile>>(
+    "/api/candidate/profile",
+    {
+      method: "GET",
+      token,
+    },
+  );
+
+  return response.data;
+}
+
+export async function updateCandidateProfile(
+  token: string,
+  payload: UpdateCandidateProfilePayload,
+) {
+  const response = await apiRequest<ResourceResponse<CandidateProfile>>(
+    "/api/candidate/profile",
+    {
+      body: payload,
+      method: "PATCH",
+      token,
+    },
+  );
+
+  return response.data;
 }
 
 export async function listResumes(token: string) {
