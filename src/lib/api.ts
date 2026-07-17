@@ -39,6 +39,11 @@ export type CandidateProfile = {
   phone: string | null;
   location: string | null;
   professional_summary: string | null;
+  desired_roles: string[] | null;
+  preferred_locations: string[] | null;
+  work_modes: WorkMode[] | null;
+  employment_types: EmploymentType[] | null;
+  availability: CandidateAvailability | null;
   linkedin_url: string | null;
   github_url: string | null;
   portfolio_url: string | null;
@@ -52,10 +57,22 @@ export type UpdateCandidateProfilePayload = {
   phone?: string | null;
   location?: string | null;
   professional_summary?: string | null;
+  desired_roles?: string[] | null;
+  preferred_locations?: string[] | null;
+  work_modes?: WorkMode[] | null;
+  employment_types?: EmploymentType[] | null;
+  availability?: CandidateAvailability | null;
   linkedin_url?: string | null;
   github_url?: string | null;
   portfolio_url?: string | null;
 };
+
+export type WorkMode = "remote" | "hybrid" | "on_site";
+export type EmploymentType = "full_time" | "part_time" | "contract" | "internship";
+export type CandidateAvailability =
+  | "actively_looking"
+  | "open_to_opportunities"
+  | "not_looking";
 
 export type ResumeParseStatus = "pending" | "success" | "failed";
 
