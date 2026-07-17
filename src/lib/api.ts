@@ -28,6 +28,15 @@ export type RegisterRequest = {
   name: string;
   email: string;
   password: string;
+  account_type?: AccountType;
+  company_name?: string;
+};
+
+export type Company = {
+  id: number;
+  name: string;
+  membership_role: "owner" | "member";
+  created_at: string | null;
 };
 
 export type CandidateProfile = {
@@ -473,6 +482,15 @@ export async function updateCandidateProfile(
       token,
     },
   );
+
+  return response.data;
+}
+
+export async function getHrCompany(token: string) {
+  const response = await apiRequest<ResourceResponse<Company>>("/api/hr/company", {
+    method: "GET",
+    token,
+  });
 
   return response.data;
 }

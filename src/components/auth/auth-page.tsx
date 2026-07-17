@@ -13,6 +13,7 @@ import {
 import {
   ApiError,
   INVALID_CREDENTIALS_MESSAGE,
+  type AccountType,
   type FieldErrors,
 } from "@/lib/api";
 import { accountHomePath, safeRedirectPath } from "@/lib/routing";
@@ -22,6 +23,8 @@ import { ApplyAiLogo } from "@/components/auth/applyai-logo";
 type AuthMode = "login" | "register";
 
 type FormValues = {
+  accountType: AccountType;
+  companyName: string;
   confirmPassword: string;
   email: string;
   name: string;
@@ -38,6 +41,10 @@ function validateForm(mode: AuthMode, values: FormValues): FieldErrors {
 
   if (mode === "register" && !values.name.trim()) {
     errors.name = "Enter your name.";
+  }
+
+  if (mode === "register" && values.accountType === "hr" && !values.companyName.trim()) {
+    errors.companyName = "Enter your company name.";
   }
 
   if (!emailPattern.test(values.email.trim())) {
@@ -179,6 +186,8 @@ export function AuthPage({
   const reduceMotion = shouldReduceMotion === true;
   const { login, register, status, user } = useAuth();
   const [values, setValues] = useState<FormValues>({
+    accountType: "candidate",
+    companyName: "",
     confirmPassword: "",
     email: "",
     name: "",
@@ -203,7 +212,7 @@ export function AuthPage({
         : {
             button: "Create account",
             description:
-              "Start analyzing resumes, generating tailored PDFs, and tracking applications.",
+              "Choose the workspace that fits how you use ApplyAI.",
             footerAction: "Sign in",
             footerText: "Already have an account?",
             heading: "Create your ApplyAI account",
@@ -245,6 +254,8 @@ export function AuthPage({
           password: values.password,
         })
         : await register({
+          account_type: values.accountType,
+          company_name: values.accountType === "hr" ? values.companyName.trim() : undefined,
           email: values.email.trim(),
           name: values.name.trim(),
           password: values.password,
@@ -349,14 +360,56 @@ export function AuthPage({
               {...itemMotion}
               transition={reduceMotion ? undefined : { duration: 0.38, delay: 0.14, ease: motionEase }}
             >
-              <AuthInput
-                error={fieldErrors.name}
-                label="Name"
-                name="name"
-                onChange={updateField}
-                type="text"
-                value={values.name}
-              />
+              <fieldset>
+                <legend className="text-sm font-semibold text-[#20332a]">I am joining as</legend>
+                <div className="mt-2 grid gap-2 sm:grid-cols-2">
+                  {([
+                    ["candidate", "Candidate", "Analyze resumes and track applications."],
+                    ["hr", "HR / company", "Create your company workspace."],
+                  ] as const).map(([accountType, label, description]) => {
+                    const selected = values.accountType === accountType;
+
+                    return (
+                      <button
+                        aria-pressed={selected}
+                        className={`rounded-2xl border p-4 text-left transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#a6f20f] ${
+                          selected
+                            ? "border-[#588100] bg-[#eff9d1]"
+                            : "border-[#d8d5c8] bg-[#fbfaf4] hover:border-[#b7b29f]"
+                        }`}
+                        key={accountType}
+                        onClick={() => updateField("accountType", accountType)}
+                        type="button"
+                      >
+                        <span className="block text-sm font-semibold text-[#20332a]">{label}</span>
+                        <span className="mt-1 block text-xs leading-5 text-[#657167]">{description}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </fieldset>
+              <div className="mt-5">
+                <AuthInput
+                  error={fieldErrors.name}
+                  label="Your name"
+                  name="name"
+                  onChange={updateField}
+                  type="text"
+                  value={values.name}
+                />
+              </div>
+              {values.accountType === "hr" ? (
+                <div className="mt-5">
+                  <AuthInput
+                    error={fieldErrors.companyName}
+                    label="Company name"
+                    name="companyName"
+                    onChange={updateField}
+                    type="text"
+                    value={values.companyName}
+                  />
+                </div>
+              ) : null}
             </motion.div>
           ) : null}
 
