@@ -288,6 +288,7 @@ export function JobsView({ publicMode = false }: { publicMode?: boolean }) {
 
       <form
         className="mt-6 rounded-[24px] border border-[#e1ded1] bg-white p-4 shadow-sm sm:p-5"
+        data-tour="jobs-search"
         onSubmit={submitFilters}
       >
         <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-[minmax(0,1.3fr)_minmax(240px,0.8fr)_auto]">

@@ -18,6 +18,7 @@ import {
   type ResumeParseStatus,
 } from "@/lib/api";
 import { useAuth } from "@/contexts/auth-context";
+import { useTour } from "@/components/app/tour/tour-context";
 
 type LoadStatus = "loading" | "ready" | "error";
 
@@ -168,6 +169,7 @@ function TrashIcon() {
 
 export function ResumesView() {
   const { token } = useAuth();
+  const { completeAction } = useTour();
   const shouldReduceMotion = useReducedMotion();
   const reduceMotion = shouldReduceMotion === true;
 
@@ -271,6 +273,10 @@ export function ResumesView() {
       setResumes((current) => [resume, ...current]);
       setSelectedFile(null);
       resetInput();
+
+      if (resume.parse_status === "success") {
+        completeAction("resume_uploaded");
+      }
     } catch (error) {
       if (error instanceof ApiError) {
         setUploadError(error.fieldErrors.resume ?? error.message);
@@ -331,6 +337,7 @@ export function ResumesView() {
       <motion.section
         aria-labelledby="upload-heading"
         className="mt-8 rounded-[28px] border border-[#e1ded1] bg-white p-6 shadow-sm sm:p-8"
+        data-tour="resume-upload"
         {...(reduceMotion
           ? {}
           : {
@@ -354,7 +361,6 @@ export function ResumesView() {
 
         <div
           aria-label="Upload a PDF resume"
-          data-tour="resume-upload"
           className={`mt-5 flex flex-col items-center justify-center rounded-3xl border-2 border-dashed px-6 py-10 text-center transition ${
             isDragging
               ? "border-[#588100] bg-[#f5ffe0]"

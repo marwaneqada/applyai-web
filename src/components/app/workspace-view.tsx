@@ -213,6 +213,7 @@ export function WorkspaceView() {
   return (
     <main className="mx-auto w-full max-w-6xl px-5 py-10 sm:px-6 lg:px-8">
       <motion.header
+        data-tour="workspace-overview"
         {...(reduceMotion
           ? {}
           : {
@@ -260,8 +261,7 @@ export function WorkspaceView() {
               New to ApplyAI? Take the guided tour
             </p>
             <p className="mt-1 text-sm leading-6 text-[#3f5a24]">
-              A quick walkthrough from uploading a resume to downloading a tailored
-              PDF and tracking the application.
+              Explore every Candidate tool and optionally try real actions as you go.
             </p>
           </div>
         </div>
@@ -270,7 +270,7 @@ export function WorkspaceView() {
           onClick={startTour}
           type="button"
         >
-          Take the tour
+          Start guide
         </button>
       </div>
 

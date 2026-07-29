@@ -212,7 +212,7 @@ export function ApplicationFormModal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-[#062b1f]/40 px-4 py-8 backdrop-blur-sm"
+      className="fixed inset-0 z-[70] flex items-start justify-center overflow-y-auto bg-[#062b1f]/40 px-4 py-8 backdrop-blur-sm"
       onClick={onClose}
       role="presentation"
     >

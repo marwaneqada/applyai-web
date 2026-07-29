@@ -107,17 +107,21 @@ export function AppShell({ children }: { children: ReactNode }) {
               );
             })}
           </nav>
-          <div className="relative" ref={accountMenuRef}>
+          <div className="relative flex items-center gap-1" ref={accountMenuRef}>
+            <Link
+              className="hidden max-w-36 truncate rounded-full px-2 py-2 text-sm font-semibold text-[#20332a] transition hover:bg-[#eff3df] hover:text-[#062b1f] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#a6f20f] sm:block"
+              href="/app/profile"
+            >
+              {user.name}
+            </Link>
             <button
+              aria-label="Open account menu"
               aria-expanded={isAccountMenuOpen}
               aria-haspopup="menu"
-              className="flex items-center gap-3 rounded-full px-2 py-1.5 text-left transition hover:bg-[#eff3df] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#a6f20f]"
+              className="grid size-10 shrink-0 place-items-center rounded-full text-left transition hover:bg-[#eff3df] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#a6f20f]"
               onClick={() => setIsAccountMenuOpen((open) => !open)}
               type="button"
             >
-              <span className="hidden max-w-36 truncate text-sm font-semibold text-[#20332a] sm:block">
-                {user.name}
-              </span>
               <span className="grid size-9 shrink-0 place-items-center rounded-full bg-[#062b1f] text-sm font-semibold text-[#f7f5ec]" aria-hidden="true">
                 {user.name.slice(0, 1).toUpperCase()}
               </span>

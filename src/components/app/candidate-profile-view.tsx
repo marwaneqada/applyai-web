@@ -353,7 +353,10 @@ function ChoicePills<T extends string>({
 function ProfileSkeleton() {
   return (
     <main className="mx-auto w-full max-w-6xl px-5 py-10 sm:px-6 lg:px-8">
-      <div className="h-9 w-44 animate-pulse rounded-xl bg-[#e8e4d8]" />
+      <div
+        className="h-9 w-44 animate-pulse rounded-xl bg-[#e8e4d8]"
+        data-tour="profile-overview"
+      />
       <div className="mt-3 h-5 w-full max-w-md animate-pulse rounded-lg bg-[#e8e4d8]" />
       <div className="mt-8 grid gap-5 lg:grid-cols-[minmax(0,1fr)_280px]">
         <div className="h-[620px] animate-pulse rounded-[28px] border border-[#e8e4d8] bg-white" />
@@ -392,7 +395,10 @@ function ProfileOverview({
   ].filter((link) => link.href);
 
   return (
-    <section className="overflow-hidden rounded-[28px] border border-[#e1ded1] bg-white shadow-sm">
+    <section
+      className="overflow-hidden rounded-[28px] border border-[#e1ded1] bg-white shadow-sm"
+      data-tour="profile-overview"
+    >
       <div className="border-b border-[#e8e4d8] bg-[#eff3df] px-6 py-7 sm:px-8">
         <div className="flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
           <div className="flex min-w-0 items-center gap-4">
@@ -694,7 +700,10 @@ export function CandidateProfileView() {
   if (loadStatus === "error") {
     return (
       <main className="mx-auto w-full max-w-6xl px-5 py-10 sm:px-6 lg:px-8">
-        <section className="rounded-[28px] border border-[#efc8bf] bg-[#fff7f4] p-6 text-center">
+        <section
+          className="rounded-[28px] border border-[#efc8bf] bg-[#fff7f4] p-6 text-center"
+          data-tour="profile-overview"
+        >
           <h1 className="text-xl font-semibold text-[#062b1f]">Profile unavailable</h1>
           <p className="mx-auto mt-2 max-w-xl text-sm leading-6 text-[#8b281f]">
             {loadError}
@@ -735,6 +744,7 @@ export function CandidateProfileView() {
         {isEditing ? (
         <form
           className="rounded-[28px] border border-[#e1ded1] bg-white p-6 shadow-sm sm:p-8"
+          data-tour="profile-overview"
           noValidate
           onSubmit={handleSubmit}
         >

@@ -11,6 +11,7 @@ import {
   type Analysis,
 } from "@/lib/api";
 import { useAuth } from "@/contexts/auth-context";
+import { useTour } from "@/components/app/tour/tour-context";
 import {
   AnalysisStatusBadge,
   formatDate,
@@ -21,10 +22,13 @@ import {
 type LoadStatus = "loading" | "ready" | "error";
 
 function NewAnalysisButton({ className = "" }: { className?: string }) {
+  const { goTo } = useTour();
+
   return (
     <Link
       className={`inline-flex h-11 items-center justify-center rounded-full bg-[#062b1f] px-5 text-sm font-semibold text-[#f7f5ec] shadow-[0_16px_34px_rgba(6,43,31,0.18)] transition hover:bg-[#031a13] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#a6f20f] ${className}`}
       href="/app/analyses/new"
+      onClick={() => goTo("create-analysis")}
     >
       New analysis
     </Link>
@@ -113,7 +117,7 @@ export function AnalysesListView() {
     <main className="mx-auto w-full max-w-5xl px-5 py-10 sm:px-6 lg:px-8">
       <motion.header
         className="flex flex-wrap items-end justify-between gap-4"
-        data-tour="analyses-header"
+        data-tour="analyses-overview"
         {...(reduceMotion
           ? {}
           : {

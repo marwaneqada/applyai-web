@@ -17,6 +17,7 @@ import {
   type Resume,
 } from "@/lib/api";
 import { useAuth } from "@/contexts/auth-context";
+import { useTour } from "@/components/app/tour/tour-context";
 import { motionEase } from "./analysis-shared";
 
 type LoadStatus = "loading" | "ready" | "error";
@@ -53,6 +54,7 @@ function isValidUrl(value: string) {
 
 export function NewAnalysisView() {
   const { token } = useAuth();
+  const { completeAction } = useTour();
   const router = useRouter();
   const shouldReduceMotion = useReducedMotion();
   const reduceMotion = shouldReduceMotion === true;
@@ -149,6 +151,7 @@ export function NewAnalysisView() {
         job_description: jobDescription.trim(),
       });
 
+      completeAction("analysis_created");
       router.push(`/app/analyses/${analysis.id}`);
     } catch (error) {
       if (error instanceof ApiError) {
@@ -401,7 +404,6 @@ export function NewAnalysisView() {
 
             <button
               className="inline-flex h-12 items-center justify-center gap-2 rounded-full bg-[#062b1f] px-6 text-sm font-semibold text-[#f7f5ec] shadow-[0_16px_34px_rgba(6,43,31,0.18)] transition hover:bg-[#031a13] disabled:cursor-not-allowed disabled:opacity-70 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#a6f20f]"
-              data-tour="run-analysis"
               disabled={isSubmitting}
               type="submit"
             >

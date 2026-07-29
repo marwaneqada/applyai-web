@@ -14,68 +14,104 @@ import {
 import { useAuth } from "@/contexts/auth-context";
 import { TourOverlay } from "./tour-overlay";
 
+export type TourAction =
+  | "resume_uploaded"
+  | "analysis_created"
+  | "application_created";
+
 export type TourStep = {
-  page: string;
+  id: string;
+  page: string | null;
+  pagePrefix?: string;
   selector: string;
   title: string;
   body: string;
+  action?: TourAction;
+  optionalHint?: string;
+  nextLabel?: string;
 };
 
 export const TOUR_STEPS: TourStep[] = [
   {
+    id: "workspace",
     page: "/app",
-    selector: "",
-    title: "Welcome to ApplyAI",
-    body: "Here's the quick flow from resume to a tailored PDF. Use Next to follow along — it takes about a minute.",
+    selector: "workspace-overview",
+    title: "Your Candidate workspace",
+    body: "This is your overview of resumes, analyses, and active applications. The guide will now walk through every area of the Candidate app.",
+    nextLabel: "Explore",
   },
   {
+    id: "upload-resume",
     page: "/app/resumes",
     selector: "resume-upload",
-    title: "1 · Upload your resume",
-    body: "Drop a PDF here or browse. We read the text on upload, so it's ready to analyze right away.",
+    title: "Upload a resume",
+    body: "Choose a PDF and upload it while the guide is open, or continue and come back whenever you're ready.",
+    action: "resume_uploaded",
+    optionalHint: "Optional: upload a PDF now, or choose Next.",
   },
   {
+    id: "create-analysis",
     page: "/app/analyses/new",
     selector: "analysis-form",
-    title: "2 · Start an analysis",
-    body: "Choose your resume and paste the full job description you're targeting.",
+    title: "Analyze a real job",
+    body: "Select a resume, enter the role, and paste the full job description. You can submit it now or explore this later.",
+    action: "analysis_created",
+    optionalHint: "Optional: run an analysis now, or choose Next.",
   },
   {
-    page: "/app/analyses/new",
-    selector: "run-analysis",
-    title: "3 · Run it",
-    body: "You'll get a match score, matched & missing keywords, rewritten bullets, and a cover letter.",
-  },
-  {
+    id: "analysis-results",
     page: "/app/analyses",
-    selector: "analyses-header",
-    title: "4 · Results & PDF",
-    body: "Analyses are saved here. Open a completed one and use “Tailored resume” to download a PDF — Harvard, Modern, or Minimal.",
+    pagePrefix: "/app/analyses/",
+    selector: "analyses-overview",
+    title: "Review every analysis",
+    body: "Open any analysis to see its score, keyword gaps, rewritten bullets, cover letter, and tailored resume. Failed analyses can also be retried here.",
   },
   {
+    id: "jobs",
+    page: "/app/jobs",
+    selector: "jobs-search",
+    title: "Find relevant jobs",
+    body: "Search by title, company, location, or skill. Refine results by employment type, work mode, experience, application status, and your profile preferences.",
+  },
+  {
+    id: "applications",
     page: "/app/applications",
     selector: "add-application",
-    title: "5 · Track applications",
-    body: "Add roles here or straight from an analysis, then drag cards from Saved through to Offer.",
+    title: "Track your applications",
+    body: "Add opportunities to your tracker and move them through each stage. You can create one now or continue the guide.",
+    action: "application_created",
+    optionalHint: "Optional: add an application now, or choose Next.",
   },
   {
+    id: "profile",
+    page: "/app/profile",
+    selector: "profile-overview",
+    title: "Complete your Candidate profile",
+    body: "Keep your professional identity, preferred roles, locations, work modes, availability, and links in one place. Your preferences support better job matching.",
+  },
+  {
+    id: "complete",
     page: "/app",
-    selector: "wk-guide",
-    title: "You're all set",
-    body: "That's the whole flow. You can reopen this tour anytime from here.",
+    selector: "",
+    title: "You're ready to use ApplyAI",
+    body: "You can return to any area from the main navigation. To replay this guide later, open your avatar menu and choose Guide.",
+    nextLabel: "Finish",
   },
 ];
 
-const SEEN_KEY = "applyai.tour.completed";
+const COMPLETED_KEY = "applyai.onboarding.v3.completed";
 
 type TourContextValue = {
+  back: () => void;
+  completeAction: (action: TourAction) => void;
+  currentStep: TourStep;
+  goTo: (stepId: string) => void;
   isActive: boolean;
+  next: () => void;
+  start: () => void;
   stepIndex: number;
   steps: TourStep[];
-  start: () => void;
   stop: () => void;
-  next: () => void;
-  back: () => void;
 };
 
 const TourContext = createContext<TourContextValue | null>(null);
@@ -88,34 +124,30 @@ export function TourProvider({ children }: { children: ReactNode }) {
   const [stepIndex, setStepIndex] = useState(0);
   const autoStartedRef = useRef(false);
 
+  const currentStep = TOUR_STEPS[stepIndex] ?? TOUR_STEPS[0];
+
   const navigateTo = useCallback(
     (index: number) => {
-      const step = TOUR_STEPS[index];
+      const destination = TOUR_STEPS[index]?.page;
 
-      if (step && step.page !== pathname) {
-        router.push(step.page);
+      if (destination && destination !== pathname) {
+        router.push(destination);
       }
     },
     [pathname, router],
   );
 
-  const start = useCallback(() => {
-    setStepIndex(0);
-    setIsActive(true);
-    navigateTo(0);
-  }, [navigateTo]);
-
   const stop = useCallback(() => {
     setIsActive(false);
 
     try {
-      window.localStorage.setItem(SEEN_KEY, "1");
+      window.localStorage.setItem(COMPLETED_KEY, "1");
     } catch {
-      // Ignore storage failures (private mode, etc.).
+      // Storage can be unavailable in private browsing modes.
     }
   }, []);
 
-  const next = useCallback(() => {
+  const advance = useCallback(() => {
     const nextIndex = stepIndex + 1;
 
     if (nextIndex >= TOUR_STEPS.length) {
@@ -127,49 +159,113 @@ export function TourProvider({ children }: { children: ReactNode }) {
     navigateTo(nextIndex);
   }, [navigateTo, stepIndex, stop]);
 
-  const back = useCallback(() => {
-    const prevIndex = stepIndex - 1;
+  const start = useCallback(() => {
+    setStepIndex(0);
+    setIsActive(true);
+    navigateTo(0);
+  }, [navigateTo]);
 
-    if (prevIndex < 0) {
+  const next = useCallback(() => {
+    advance();
+  }, [advance]);
+
+  const goTo = useCallback(
+    (stepId: string) => {
+      if (!isActive) {
+        return;
+      }
+
+      const nextIndex = TOUR_STEPS.findIndex((step) => step.id === stepId);
+
+      if (nextIndex < 0) {
+        return;
+      }
+
+      setStepIndex(nextIndex);
+      navigateTo(nextIndex);
+    },
+    [isActive, navigateTo],
+  );
+
+  const completeAction = useCallback(
+    (action: TourAction) => {
+      if (!isActive || currentStep.action !== action) {
+        return;
+      }
+
+      advance();
+    },
+    [advance, currentStep.action, isActive],
+  );
+
+  const back = useCallback(() => {
+    const previousIndex = stepIndex - 1;
+
+    if (previousIndex < 0) {
       return;
     }
 
-    setStepIndex(prevIndex);
-    navigateTo(prevIndex);
+    setStepIndex(previousIndex);
+    navigateTo(previousIndex);
   }, [navigateTo, stepIndex]);
 
   useEffect(() => {
-    if (autoStartedRef.current || status !== "authenticated" || pathname !== "/app") {
+    if (
+      autoStartedRef.current ||
+      status !== "authenticated" ||
+      pathname !== "/app"
+    ) {
       return;
     }
 
-    let seen = false;
+    let completed = false;
 
     try {
-      seen = window.localStorage.getItem(SEEN_KEY) === "1";
+      completed = window.localStorage.getItem(COMPLETED_KEY) === "1";
     } catch {
-      seen = false;
+      completed = false;
     }
 
-    if (seen) {
+    if (completed) {
       return;
     }
 
     autoStartedRef.current = true;
-    const timer = window.setTimeout(() => start(), 900);
+    const timer = window.setTimeout(() => start(), 700);
 
     return () => window.clearTimeout(timer);
   }, [pathname, start, status]);
 
   const value = useMemo<TourContextValue>(
-    () => ({ back, isActive, next, start, stepIndex, steps: TOUR_STEPS, stop }),
-    [back, isActive, next, start, stepIndex, stop],
+    () => ({
+      back,
+      completeAction,
+      currentStep,
+      goTo,
+      isActive,
+      next,
+      start,
+      stepIndex,
+      steps: TOUR_STEPS,
+      stop,
+    }),
+    [
+      back,
+      completeAction,
+      currentStep,
+      goTo,
+      isActive,
+      next,
+      start,
+      stepIndex,
+      stop,
+    ],
   );
 
   return (
     <TourContext.Provider value={value}>
       {children}
-      {isActive ? <TourOverlay key={stepIndex} /> : null}
+      {isActive ? <TourOverlay key={currentStep.id} /> : null}
     </TourContext.Provider>
   );
 }

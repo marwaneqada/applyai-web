@@ -19,6 +19,7 @@ import {
   type ApplicationStatus,
 } from "@/lib/api";
 import { useAuth } from "@/contexts/auth-context";
+import { useTour } from "@/components/app/tour/tour-context";
 import { ApplicationFormModal } from "./application-form-modal";
 import {
   EditIcon,
@@ -119,6 +120,7 @@ function StatTile({ label, value }: { label: string; value: number }) {
 
 export function ApplicationsBoardView() {
   const { token } = useAuth();
+  const { completeAction } = useTour();
   const shouldReduceMotion = useReducedMotion();
   const reduceMotion = shouldReduceMotion === true;
 
@@ -629,7 +631,13 @@ export function ApplicationsBoardView() {
           initial={modal.mode === "edit" ? modal.application : undefined}
           mode={modal.mode}
           onClose={() => setModal(null)}
-          onSaved={handleSaved}
+          onSaved={(application) => {
+            handleSaved(application);
+
+            if (modal.mode === "create") {
+              completeAction("application_created");
+            }
+          }}
           token={token}
         />
       ) : null}

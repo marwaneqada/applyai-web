@@ -184,6 +184,7 @@ export function AnalysisDetailView({ analysisId }: { analysisId: number }) {
         <>
           <motion.header
             className="mt-6 rounded-[28px] border border-[#e1ded1] bg-white p-6 shadow-sm sm:p-7"
+            data-tour="analyses-overview"
             {...(reduceMotion
               ? {}
               : {
