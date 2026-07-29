@@ -193,11 +193,17 @@ export function NewAnalysisView() {
       </motion.div>
 
       {loadStatus === "loading" ? (
-        <div className="mt-8 h-72 animate-pulse rounded-[28px] border border-[#e8e4d8] bg-white" />
+        <div
+          className="mt-8 h-72 animate-pulse rounded-[28px] border border-[#e8e4d8] bg-white"
+          data-tour="analysis-form"
+        />
       ) : null}
 
       {loadStatus === "error" ? (
-        <div className="mt-8 rounded-[28px] border border-[#efc8bf] bg-[#fff7f4] p-6 text-center">
+        <div
+          className="mt-8 rounded-[28px] border border-[#efc8bf] bg-[#fff7f4] p-6 text-center"
+          data-tour="analysis-form"
+        >
           <p className="text-sm font-medium text-[#8b281f]">{loadError}</p>
           <button
             className="mt-4 inline-flex h-10 items-center justify-center rounded-full border border-[#d8d5c8] bg-[#fbfaf4] px-5 text-sm font-semibold text-[#062b1f] shadow-sm transition hover:border-[#b7b29f] hover:bg-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#a6f20f]"
@@ -210,7 +216,10 @@ export function NewAnalysisView() {
       ) : null}
 
       {loadStatus === "ready" && resumes.length === 0 ? (
-        <div className="mt-8 rounded-[28px] border border-dashed border-[#d8d5c8] bg-white p-10 text-center">
+        <div
+          className="mt-8 rounded-[28px] border border-dashed border-[#d8d5c8] bg-white p-10 text-center"
+          data-tour="analysis-form"
+        >
           <h2 className="text-base font-semibold text-[#062b1f]">
             No parsed resumes yet
           </h2>

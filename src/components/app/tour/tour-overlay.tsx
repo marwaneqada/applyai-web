@@ -38,14 +38,69 @@ function BackdropPanel({
   );
 }
 
-function LoadingStep() {
+function LoadingStep({
+  canGoBack,
+  onBack,
+  onNext,
+  onStop,
+  showRecovery,
+}: {
+  canGoBack: boolean;
+  onBack: () => void;
+  onNext: () => void;
+  onStop: () => void;
+  showRecovery: boolean;
+}) {
   return (
     <div className="pointer-events-auto fixed inset-0 grid place-items-center bg-[#062b1f]/55 px-5">
-      <div className="flex items-center gap-3 rounded-2xl border border-[#e1ded1] bg-white px-5 py-4 shadow-[0_24px_70px_rgba(6,43,31,0.28)]">
-        <span className="h-4 w-4 animate-spin rounded-full border-2 border-[#d9e9c5] border-t-[#588100]" />
-        <p className="text-sm font-semibold text-[#405047]">
-          Opening the next step...
-        </p>
+      <div className="w-full max-w-sm rounded-2xl border border-[#e1ded1] bg-white p-5 shadow-[0_24px_70px_rgba(6,43,31,0.28)]">
+        <div className="flex items-center gap-3">
+          <span
+            className={`h-4 w-4 shrink-0 rounded-full border-2 border-[#d9e9c5] border-t-[#588100] ${
+              showRecovery ? "" : "animate-spin"
+            }`}
+          />
+          <div>
+            <p className="text-sm font-semibold text-[#20332a]">
+              {showRecovery
+                ? "This guide step isn't available yet."
+                : "Opening the next step..."}
+            </p>
+            {showRecovery ? (
+              <p className="mt-1 text-xs leading-5 text-[#657167]">
+                You can continue the guide or close it and use the page normally.
+              </p>
+            ) : null}
+          </div>
+        </div>
+
+        {showRecovery ? (
+          <div className="mt-4 flex flex-wrap justify-end gap-2">
+            <button
+              className="h-9 rounded-full px-3 text-sm font-semibold text-[#657167] transition hover:bg-[#eff3df] hover:text-[#062b1f]"
+              onClick={onStop}
+              type="button"
+            >
+              Close guide
+            </button>
+            {canGoBack ? (
+              <button
+                className="h-9 rounded-full px-3 text-sm font-semibold text-[#405047] transition hover:bg-[#eff3df]"
+                onClick={onBack}
+                type="button"
+              >
+                Back
+              </button>
+            ) : null}
+            <button
+              className="h-9 rounded-full bg-[#062b1f] px-4 text-sm font-semibold text-[#f7f5ec] transition hover:bg-[#031a13]"
+              onClick={onNext}
+              type="button"
+            >
+              Next
+            </button>
+          </div>
+        ) : null}
       </div>
     </div>
   );
@@ -62,6 +117,7 @@ export function TourOverlay() {
   } = useTour();
   const pathname = usePathname();
   const [rect, setRect] = useState<DOMRect | null>(null);
+  const [showRecovery, setShowRecovery] = useState(false);
   const [viewport, setViewport] = useState<Viewport>({ height: 0, width: 0 });
 
   const routeReady =
@@ -70,6 +126,16 @@ export function TourOverlay() {
     Boolean(step.pagePrefix && pathname.startsWith(step.pagePrefix));
   const needsTarget = step.selector !== "";
   const targetReady = !needsTarget || rect !== null;
+
+  useEffect(() => {
+    if (routeReady && targetReady) {
+      return;
+    }
+
+    const timer = window.setTimeout(() => setShowRecovery(true), 4000);
+
+    return () => window.clearTimeout(timer);
+  }, [routeReady, step.id, targetReady]);
 
   useEffect(() => {
     const updateViewport = () => {
@@ -181,7 +247,13 @@ export function TourOverlay() {
   if (viewport.width === 0 || !routeReady || !targetReady) {
     return createPortal(
       <div className="pointer-events-none fixed inset-0 z-[60]">
-        <LoadingStep />
+        <LoadingStep
+          canGoBack={stepIndex > 0}
+          onBack={back}
+          onNext={next}
+          onStop={stop}
+          showRecovery={showRecovery}
+        />
       </div>,
       document.body,
     );
