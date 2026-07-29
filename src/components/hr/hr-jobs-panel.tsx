@@ -1,7 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useState, type FormEvent } from "react";
-import { ApiError, createHrJob, deleteHrJob, isUnauthorizedError, listHrJobs, updateHrJob, type HrJob, type JobStatus } from "@/lib/api";
+import Link from "next/link";
+import { ApiError, createHrJob, deleteHrJob, isUnauthorizedError, listHrJobs, updateHrJob, type HrJob, type JobStatus, type PaginationMeta } from "@/lib/api";
 import { useAuth } from "@/contexts/auth-context";
 
 const emptyJob = { title: "", summary: "", description: "", requiredSkills: [] as string[], preferredSkills: [] as string[], location: "", experience_level: "", work_mode: "", employment_type: "", status: "draft" as JobStatus, opens_at: "", closes_at: "" };
@@ -20,6 +21,8 @@ function SkillTags({ label, values, onChange }: { label: string; values: string[
 export function HrJobsPanel() {
   const { clearSession, token } = useAuth();
   const [jobs, setJobs] = useState<HrJob[]>([]);
+  const [pagination, setPagination] = useState<PaginationMeta | null>(null);
+  const [page, setPage] = useState(1);
   const [values, setValues] = useState(emptyJob);
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
@@ -28,9 +31,14 @@ export function HrJobsPanel() {
 
   const load = useCallback(async () => {
     if (!token) return;
-    try { setJobs(await listHrJobs(token)); setError(""); }
+    try {
+      const response = await listHrJobs(token, page);
+      setJobs(response.data);
+      setPagination(response.meta);
+      setError("");
+    }
     catch (cause) { if (isUnauthorizedError(cause)) clearSession(); else setError(cause instanceof ApiError ? cause.message : "We couldn't load jobs."); }
-  }, [clearSession, token]);
+  }, [clearSession, page, token]);
 
   useEffect(() => { void Promise.resolve().then(load); }, [load]);
 
@@ -53,7 +61,13 @@ export function HrJobsPanel() {
       delete (payload as { requiredSkills?: string[] }).requiredSkills;
       delete (payload as { preferredSkills?: string[] }).preferredSkills;
       const job = editingId ? await updateHrJob(token, editingId, payload) : await createHrJob(token, payload);
-      setJobs((current) => editingId ? current.map((item) => item.id === job.id ? job : item) : [job, ...current]);
+      if (editingId) {
+        setJobs((current) => current.map((item) => item.id === job.id ? job : item));
+      } else if (page === 1) {
+        await load();
+      } else {
+        setPage(1);
+      }
       setValues(emptyJob); setEditingId(null); setShowForm(false);
     } catch (cause) { setError(cause instanceof ApiError ? cause.message : "We couldn't save this job."); }
     finally { setSaving(false); }
@@ -66,11 +80,18 @@ export function HrJobsPanel() {
 
   async function remove(job: HrJob) {
     if (!token || !window.confirm(`Delete “${job.title}”? This cannot be undone.`)) return;
-    try { await deleteHrJob(token, job.id); setJobs((current) => current.filter((item) => item.id !== job.id)); }
+    try {
+      await deleteHrJob(token, job.id);
+      if (jobs.length === 1 && page > 1) {
+        setPage((current) => current - 1);
+      } else {
+        await load();
+      }
+    }
     catch (cause) { setError(cause instanceof ApiError ? cause.message : "We couldn't delete this job."); }
   }
 
-  return <section className="mt-8 border-t border-[#e8e4d8] pt-8">
+  return <section>
     <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
       <div><h2 className="text-xl font-semibold">Job posts</h2><p className="mt-2 text-sm leading-6 text-[#657167]">Create roles and control exactly when candidates can apply.</p></div>
       <button className="h-11 rounded-full bg-[#062b1f] px-5 text-sm font-semibold text-[#f7f5ec] hover:bg-[#031a13]" onClick={() => { setShowForm((v) => !v); setEditingId(null); setValues(emptyJob); }} type="button">{showForm ? "Close editor" : "Create job"}</button>
@@ -91,6 +112,7 @@ export function HrJobsPanel() {
       <div className="sm:col-span-2 flex justify-end gap-3"><button className="h-11 rounded-full border border-[#d8d5c8] px-5 text-sm font-semibold" onClick={() => { setShowForm(false); setEditingId(null); setValues(emptyJob); }} type="button">Cancel</button><button className="h-11 rounded-full bg-[#062b1f] px-5 text-sm font-semibold text-[#f7f5ec] disabled:opacity-60" disabled={saving} type="submit">{saving ? "Saving..." : editingId ? "Save changes" : "Save job"}</button></div>
     </form> : null}
     {error ? <div className="mt-6 rounded-2xl border border-[#efc8bf] bg-[#fff7f4] p-4 text-sm text-[#8b281f]" role="alert"><p className="font-semibold">Jobs are temporarily unavailable</p><p className="mt-1 leading-6">{error}</p><button className="mt-3 font-semibold underline underline-offset-4" onClick={() => void load()} type="button">Try again</button></div> : null}
-    <div className="mt-6 grid gap-3">{jobs.filter((job) => job.id !== editingId).map((job) => <article className="rounded-2xl border border-[#e1ded1] bg-white p-5" key={job.id}><div className="flex flex-wrap items-start justify-between gap-3"><div><h3 className="font-semibold">{job.title}</h3><p className="mt-1 text-sm text-[#657167]">{job.location || "Location not set"}</p></div><span className={`rounded-full px-3 py-1 text-xs font-semibold ${statusStyle[job.status]}`}>{job.accepting_applications ? "Accepting applications" : job.status}</span></div><p className="mt-3 text-sm leading-6 text-[#405047]">{job.description}</p><div className="mt-4 flex flex-wrap items-center justify-between gap-3"><p className="text-sm font-medium text-[#657167]">Window: {job.opens_at || "not set"} — {job.closes_at || "not set"}</p><div className="flex gap-2"><button className="rounded-full border border-[#d8d5c8] px-4 py-2 text-sm font-semibold hover:bg-[#fbfaf4]" onClick={() => startEdit(job)} type="button">Edit</button><button className="rounded-full px-4 py-2 text-sm font-semibold text-[#9f2f22] hover:bg-[#fff7f4]" onClick={() => void remove(job)} type="button">Delete</button></div></div></article>)}{!jobs.length && !error ? <p className="rounded-2xl bg-[#eff3df] p-5 text-sm leading-6 text-[#405047]">No jobs yet. Create your first role when you are ready to publish it.</p> : null}</div>
+    <div className="mt-6 grid gap-3">{jobs.filter((job) => job.id !== editingId).map((job) => <article className="rounded-2xl border border-[#e1ded1] bg-white p-5" key={job.id}><div className="flex flex-wrap items-start justify-between gap-3"><div><h3 className="font-semibold">{job.title}</h3><p className="mt-1 text-sm text-[#657167]">{job.location || "Location not set"}</p></div><div className="flex flex-wrap items-center justify-end gap-2"><span className="rounded-full border border-[#d8d5c8] bg-[#fbfaf4] px-3 py-1 text-xs font-semibold text-[#405047]">{job.submissions_count ?? 0} {(job.submissions_count ?? 0) === 1 ? "applicant" : "applicants"}</span><span className={`rounded-full px-3 py-1 text-xs font-semibold ${statusStyle[job.status]}`}>{job.accepting_applications ? "Accepting applications" : job.status}</span></div></div><p className="mt-3 text-sm leading-6 text-[#405047]">{job.description}</p><div className="mt-4 flex flex-wrap items-center justify-between gap-3"><p className="text-sm font-medium text-[#657167]">Window: {job.opens_at || "not set"} — {job.closes_at || "not set"}</p><div className="flex flex-wrap gap-2"><Link className="rounded-full border border-[#a9c878] bg-[#eff9d1] px-4 py-2 text-sm font-semibold text-[#315000] hover:bg-[#e1edc5]" href={`/hr/jobs/${job.id}`}>Applicants</Link><button className="rounded-full border border-[#d8d5c8] px-4 py-2 text-sm font-semibold hover:bg-[#fbfaf4]" onClick={() => startEdit(job)} type="button">Edit</button><button className="rounded-full px-4 py-2 text-sm font-semibold text-[#9f2f22] hover:bg-[#fff7f4]" onClick={() => void remove(job)} type="button">Delete</button></div></div></article>)}{!jobs.length && !error ? <p className="rounded-2xl bg-[#eff3df] p-5 text-sm leading-6 text-[#405047]">No jobs yet. Create your first role when you are ready to publish it.</p> : null}</div>
+    {pagination && pagination.last_page > 1 ? <nav aria-label="Job post pages" className="mt-5 flex items-center justify-between gap-3 border-t border-[#e8e4d8] pt-5"><button className="h-10 rounded-full border border-[#d8d5c8] bg-white px-4 text-sm font-semibold text-[#405047] transition hover:border-[#a9c878] hover:bg-[#eff9d1] disabled:cursor-not-allowed disabled:opacity-40" disabled={page === 1} onClick={() => setPage((current) => current - 1)} type="button">Previous</button><p className="text-sm font-semibold text-[#657167]">Page {pagination.current_page} of {pagination.last_page} · {pagination.total} jobs</p><button className="h-10 rounded-full border border-[#d8d5c8] bg-white px-4 text-sm font-semibold text-[#405047] transition hover:border-[#a9c878] hover:bg-[#eff9d1] disabled:cursor-not-allowed disabled:opacity-40" disabled={page === pagination.last_page} onClick={() => setPage((current) => current + 1)} type="button">Next</button></nav> : null}
   </section>;
 }

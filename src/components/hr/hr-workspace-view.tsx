@@ -5,11 +5,13 @@ import { useRouter } from "next/navigation";
 import { ApiError, getHrCompany, isUnauthorizedError, type Company } from "@/lib/api";
 import { useAuth } from "@/contexts/auth-context";
 import { HrJobsPanel } from "@/components/hr/hr-jobs-panel";
+import { HrApplicantsPanel } from "@/components/hr/hr-applicants-panel";
 
 export function HrWorkspaceView() {
   const { clearSession, logout, status, token, user } = useAuth();
   const router = useRouter();
   const [company, setCompany] = useState<Company | null>(null);
+  const [activeSection, setActiveSection] = useState<"jobs" | "applicants">("jobs");
   const [error, setError] = useState("");
 
   const load = useCallback(async () => {
@@ -64,7 +66,7 @@ export function HrWorkspaceView() {
 
   return (
     <main className="min-h-screen bg-[#fbfaf4] px-5 py-10 text-[#062b1f] sm:px-6 lg:px-8">
-      <div className="mx-auto w-full max-w-4xl">
+      <div className="mx-auto w-full max-w-7xl">
         <header className="flex flex-col gap-5 border-b border-[#e8e4d8] pb-7 sm:flex-row sm:items-start sm:justify-between">
           <div>
             <p className="text-sm font-semibold text-[#588100]">HR workspace</p>
@@ -82,8 +84,8 @@ export function HrWorkspaceView() {
           </button>
         </header>
 
-        <section className="mt-8 rounded-[28px] border border-[#e1ded1] bg-white p-6 shadow-sm sm:p-8">
-          <h2 className="text-lg font-semibold">Company</h2>
+        <section className="mt-8 rounded-[24px] border border-[#e1ded1] bg-white px-6 py-5 shadow-sm">
+          <h2 className="text-sm font-semibold">Company</h2>
           {error ? (
             <div className="mt-5 rounded-2xl border border-[#efc8bf] bg-[#fff7f4] p-4 text-sm font-medium text-[#8b281f]" role="alert">
               <p>{error}</p>
@@ -92,7 +94,7 @@ export function HrWorkspaceView() {
               </button>
             </div>
           ) : company ? (
-            <dl className="mt-6 grid gap-5 sm:grid-cols-2">
+            <dl className="mt-4 grid gap-5 sm:grid-cols-2">
               <div>
                 <dt className="text-xs font-semibold text-[#657167]">Company name</dt>
                 <dd className="mt-1 text-lg font-semibold text-[#20332a]">{company.name}</dd>
@@ -105,7 +107,29 @@ export function HrWorkspaceView() {
           ) : (
             <div className="mt-6 h-20 animate-pulse rounded-2xl bg-[#eff3df]" />
           )}
-          <HrJobsPanel />
+        </section>
+
+        <div className="mt-7 flex gap-1 border-b border-[#d8d5c8]" role="tablist" aria-label="HR workspace sections">
+          {(["jobs", "applicants"] as const).map((section) => (
+            <button
+              aria-selected={activeSection === section}
+              className={`relative px-5 pb-3 pt-2 text-sm font-semibold capitalize transition ${
+                activeSection === section
+                  ? "text-[#062b1f] after:absolute after:inset-x-2 after:bottom-[-1px] after:h-0.5 after:rounded-full after:bg-[#588100]"
+                  : "text-[#657167] hover:text-[#20332a]"
+              }`}
+              key={section}
+              onClick={() => setActiveSection(section)}
+              role="tab"
+              type="button"
+            >
+              {section}
+            </button>
+          ))}
+        </div>
+
+        <section className="mt-6 rounded-[28px] border border-[#e1ded1] bg-white p-6 shadow-sm sm:p-8">
+          {activeSection === "jobs" ? <HrJobsPanel /> : <HrApplicantsPanel />}
         </section>
       </div>
     </main>
