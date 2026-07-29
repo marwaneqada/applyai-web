@@ -39,6 +39,36 @@ export type Company = {
   created_at: string | null;
 };
 
+export type JobStatus = "draft" | "open" | "closed";
+export type JobApplicationState = "applied" | "not_applied";
+export type JobSearchFilters = {
+  q?: string;
+  skill?: string;
+  employment_type?: EmploymentType;
+  work_mode?: WorkMode;
+  experience_level?: "junior" | "mid" | "senior" | "lead";
+  application_state?: JobApplicationState;
+};
+export type HrJob = {
+  id: number;
+  title: string;
+  summary: string | null;
+  company_name?: string;
+  description: string;
+  required_skills: string[] | null;
+  preferred_skills: string[] | null;
+  location: string | null;
+  experience_level: string | null;
+  work_mode: string | null;
+  employment_type: string | null;
+  status: JobStatus;
+  opens_at: string | null;
+  closes_at: string | null;
+  accepting_applications: boolean;
+  application_status?: ApplicationStatus | null;
+};
+export type UpsertHrJobPayload = Omit<HrJob, "id" | "accepting_applications">;
+
 export type CandidateProfile = {
   id: number;
   name: string;
@@ -163,6 +193,7 @@ export type ApplicationStatus =
 export type Application = {
   id: number;
   analysis_id: number | null;
+  job_post_id: number | null;
   company_name: string;
   job_title: string;
   job_url: string | null;
@@ -495,6 +526,69 @@ export async function getHrCompany(token: string) {
   return response.data;
 }
 
+export async function listHrJobs(token: string) {
+  const response = await apiRequest<CollectionResponse<HrJob>>("/api/hr/jobs", { method: "GET", token });
+  return response.data;
+}
+
+export async function createHrJob(token: string, payload: UpsertHrJobPayload) {
+  const response = await apiRequest<ResourceResponse<HrJob>>("/api/hr/jobs", { body: payload, method: "POST", token });
+  return response.data;
+}
+
+export async function updateHrJob(token: string, id: number, payload: Partial<UpsertHrJobPayload>) {
+  const response = await apiRequest<ResourceResponse<HrJob>>(`/api/hr/jobs/${id}`, { body: payload, method: "PATCH", token });
+  return response.data;
+}
+
+export function deleteHrJob(token: string, id: number) {
+  return apiRequest<void>(`/api/hr/jobs/${id}`, { method: "DELETE", token });
+}
+
+function jobSearchParams(filters: JobSearchFilters, preferences = false) {
+  const params = new URLSearchParams();
+
+  if (preferences) params.set("match_preferences", "1");
+
+  for (const [key, value] of Object.entries(filters)) {
+    if (value) {
+      params.set(key, value);
+    }
+  }
+
+  return params;
+}
+
+export async function listCandidateJobs(
+  token: string,
+  filters: JobSearchFilters = {},
+  preferences = false,
+) {
+  const params = jobSearchParams(filters, preferences);
+  const response = await apiRequest<CollectionResponse<HrJob>>(`/api/candidate/jobs?${params}`, { method: "GET", token });
+  return response.data;
+}
+
+export async function getCandidateJob(token: string, id: number) {
+  const response = await apiRequest<ResourceResponse<HrJob>>(`/api/candidate/jobs/${id}`, { method: "GET", token });
+  return response.data;
+}
+
+export async function applyToJob(token: string, id: number) {
+  const response = await apiRequest<ResourceResponse<HrJob>>(`/api/candidate/jobs/${id}/apply`, {
+    method: "POST",
+    token,
+  });
+
+  return response.data;
+}
+
+export async function listPublicJobs(filters: JobSearchFilters = {}) {
+  const params = jobSearchParams(filters);
+  const response = await apiRequest<CollectionResponse<HrJob>>(`/api/jobs?${params}`, { method: "GET" });
+  return response.data;
+}
+
 export async function listResumes(token: string) {
   const response = await apiRequest<CollectionResponse<Resume>>("/api/resumes", {
     method: "GET",
@@ -562,6 +656,18 @@ export async function getAnalysisStatus(token: string, id: number) {
   );
 
   return response.data.status;
+}
+
+export async function retryAnalysis(token: string, id: number) {
+  const response = await apiRequest<ResourceResponse<Analysis>>(
+    `/api/analyses/${id}/retry`,
+    {
+      method: "POST",
+      token,
+    },
+  );
+
+  return response.data;
 }
 
 export async function prepareResumeStructure(token: string, analysisId: number) {

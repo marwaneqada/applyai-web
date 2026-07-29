@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ApiError, getHrCompany, isUnauthorizedError, type Company } from "@/lib/api";
 import { useAuth } from "@/contexts/auth-context";
+import { HrJobsPanel } from "@/components/hr/hr-jobs-panel";
 
 export function HrWorkspaceView() {
   const { clearSession, logout, status, token, user } = useAuth();
@@ -104,6 +105,7 @@ export function HrWorkspaceView() {
           ) : (
             <div className="mt-6 h-20 animate-pulse rounded-2xl bg-[#eff3df]" />
           )}
+          <HrJobsPanel />
         </section>
       </div>
     </main>

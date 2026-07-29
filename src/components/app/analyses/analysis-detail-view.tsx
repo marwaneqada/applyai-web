@@ -7,6 +7,7 @@ import {
   ApiError,
   getAnalysis,
   getAnalysisStatus,
+  retryAnalysis,
   type Analysis,
   type Application,
 } from "@/lib/api";
@@ -44,6 +45,8 @@ export function AnalysisDetailView({ analysisId }: { analysisId: number }) {
   const [pollCycle, setPollCycle] = useState(0);
   const [trackerOpen, setTrackerOpen] = useState(false);
   const [trackedApp, setTrackedApp] = useState<Application | null>(null);
+  const [isRetrying, setIsRetrying] = useState(false);
+  const [retryError, setRetryError] = useState("");
 
   const load = useCallback(async () => {
     if (!token) {
@@ -128,6 +131,30 @@ export function AnalysisDetailView({ analysisId }: { analysisId: number }) {
     setPollCycle((cycle) => cycle + 1);
     void load();
   }, [load]);
+
+  const handleRetry = useCallback(async () => {
+    if (!token || isRetrying) {
+      return;
+    }
+
+    setIsRetrying(true);
+    setRetryError("");
+
+    try {
+      const retried = await retryAnalysis(token, analysisId);
+      setAnalysis(retried);
+      setPollTimedOut(false);
+      setPollCycle((cycle) => cycle + 1);
+    } catch (error) {
+      setRetryError(
+        error instanceof ApiError
+          ? error.message
+          : "We couldn't retry this analysis. Please try again.",
+      );
+    } finally {
+      setIsRetrying(false);
+    }
+  }, [analysisId, isRetrying, token]);
 
   return (
     <main className="mx-auto w-full max-w-4xl px-5 py-10 sm:px-6 lg:px-8">
@@ -262,12 +289,19 @@ export function AnalysisDetailView({ analysisId }: { analysisId: number }) {
                 {analysis.error_message ??
                   "Something went wrong while analyzing this resume."}
               </p>
-              <Link
-                className="mt-4 inline-flex h-10 items-center justify-center rounded-full border border-[#d8d5c8] bg-[#fbfaf4] px-5 text-sm font-semibold text-[#062b1f] shadow-sm transition hover:border-[#b7b29f] hover:bg-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#a6f20f]"
-                href="/app/analyses/new"
+              {retryError ? (
+                <p className="mt-3 text-sm font-medium text-[#8b281f]">
+                  {retryError}
+                </p>
+              ) : null}
+              <button
+                className="mt-4 inline-flex h-10 items-center justify-center rounded-full bg-[#062b1f] px-5 text-sm font-semibold text-[#f7f5ec] shadow-[0_12px_28px_rgba(6,43,31,0.16)] transition hover:bg-[#031a13] disabled:cursor-not-allowed disabled:opacity-60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#a6f20f]"
+                disabled={isRetrying}
+                onClick={() => void handleRetry()}
+                type="button"
               >
-                Start a new analysis
-              </Link>
+                {isRetrying ? "Retrying..." : "Retry analysis"}
+              </button>
             </div>
           ) : null}
 

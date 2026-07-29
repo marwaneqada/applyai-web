@@ -2,8 +2,14 @@
 
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
-import { ApiError, listAnalyses, type Analysis } from "@/lib/api";
+import {
+  ApiError,
+  listAnalyses,
+  retryAnalysis,
+  type Analysis,
+} from "@/lib/api";
 import { useAuth } from "@/contexts/auth-context";
 import {
   AnalysisStatusBadge,
@@ -40,12 +46,15 @@ function ScoreChip({ value }: { value: number }) {
 
 export function AnalysesListView() {
   const { token } = useAuth();
+  const router = useRouter();
   const shouldReduceMotion = useReducedMotion();
   const reduceMotion = shouldReduceMotion === true;
 
   const [analyses, setAnalyses] = useState<Analysis[]>([]);
   const [loadStatus, setLoadStatus] = useState<LoadStatus>("loading");
   const [loadError, setLoadError] = useState("");
+  const [retryingId, setRetryingId] = useState<number | null>(null);
+  const [retryErrors, setRetryErrors] = useState<Record<number, string>>({});
 
   const load = useCallback(async () => {
     if (!token) {
@@ -75,6 +84,29 @@ export function AnalysesListView() {
     setLoadStatus("loading");
     setLoadError("");
     void load();
+  }
+
+  async function retryFailedAnalysis(analysisId: number) {
+    if (!token || retryingId !== null) {
+      return;
+    }
+
+    setRetryingId(analysisId);
+    setRetryErrors((current) => ({ ...current, [analysisId]: "" }));
+
+    try {
+      await retryAnalysis(token, analysisId);
+      router.push(`/app/analyses/${analysisId}`);
+    } catch (error) {
+      setRetryErrors((current) => ({
+        ...current,
+        [analysisId]:
+          error instanceof ApiError
+            ? error.message
+            : "We couldn't retry this analysis. Please try again.",
+      }));
+      setRetryingId(null);
+    }
   }
 
   return (
@@ -158,12 +190,12 @@ export function AnalysesListView() {
                       transition: { duration: 0.28, ease: motionEase },
                     })}
               >
-                <Link
-                  className="block rounded-[24px] border border-[#e1ded1] bg-white p-5 shadow-sm transition hover:border-[#cfcbbb] hover:shadow-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#a6f20f]"
-                  href={`/app/analyses/${analysis.id}`}
-                >
+                <div className="rounded-[24px] border border-[#e1ded1] bg-white p-5 shadow-sm transition hover:border-[#cfcbbb] hover:shadow-md">
                   <div className="flex flex-wrap items-center justify-between gap-3">
-                    <div className="min-w-0">
+                    <Link
+                      className="min-w-0 flex-1 rounded-lg focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#a6f20f]"
+                      href={`/app/analyses/${analysis.id}`}
+                    >
                       <p className="truncate text-sm font-semibold text-[#062b1f]">
                         {analysis.job_title}
                       </p>
@@ -175,7 +207,7 @@ export function AnalysesListView() {
                           ? ` · ${formatDate(analysis.created_at)}`
                           : ""}
                       </p>
-                    </div>
+                    </Link>
                     <div className="flex shrink-0 items-center gap-2.5">
                       {analysis.status === "completed" &&
                       analysis.result &&
@@ -183,9 +215,24 @@ export function AnalysesListView() {
                         <ScoreChip value={analysis.result.overall_score} />
                       ) : null}
                       <AnalysisStatusBadge status={analysis.status} />
+                      {analysis.status === "failed" ? (
+                        <button
+                          className="inline-flex h-9 items-center justify-center rounded-full bg-[#062b1f] px-4 text-xs font-semibold text-[#f7f5ec] transition hover:bg-[#031a13] disabled:cursor-not-allowed disabled:opacity-60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#a6f20f]"
+                          disabled={retryingId !== null}
+                          onClick={() => void retryFailedAnalysis(analysis.id)}
+                          type="button"
+                        >
+                          {retryingId === analysis.id ? "Retrying..." : "Retry"}
+                        </button>
+                      ) : null}
                     </div>
                   </div>
-                </Link>
+                  {retryErrors[analysis.id] ? (
+                    <p className="mt-3 text-xs font-medium text-[#8b281f]">
+                      {retryErrors[analysis.id]}
+                    </p>
+                  ) : null}
+                </div>
               </motion.li>
             ))}
           </AnimatePresence>

@@ -29,6 +29,12 @@ export function PublicHeader() {
               {item.label}
             </a>
           ))}
+          <Link
+            className="text-sm font-medium text-[#405047] transition hover:text-[#062b1f]"
+            href="/jobs"
+          >
+            Jobs
+          </Link>
         </nav>
 
         <div className="flex items-center gap-3">
