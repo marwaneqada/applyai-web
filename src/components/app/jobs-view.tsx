@@ -12,7 +12,6 @@ import {
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
   ApiError,
-  applyToJob,
   isUnauthorizedError,
   listCandidateJobs,
   listPublicJobs,
@@ -20,9 +19,12 @@ import {
   type HrJob,
   type JobApplicationState,
   type JobSearchFilters,
+  type PaginationMeta,
+  type PostedWithinDays,
   type WorkMode,
 } from "@/lib/api";
 import { useAuth } from "@/contexts/auth-context";
+import { JobApplicationPanel } from "@/components/app/job-application-panel";
 
 type ExperienceLevel = "junior" | "mid" | "senior" | "lead";
 
@@ -33,6 +35,7 @@ type FilterDraft = {
   work_mode: WorkMode | "";
   experience_level: ExperienceLevel | "";
   application_state: JobApplicationState | "";
+  posted_within_days: PostedWithinDays | "";
 };
 
 const EMPTY_FILTERS: FilterDraft = {
@@ -42,6 +45,7 @@ const EMPTY_FILTERS: FilterDraft = {
   work_mode: "",
   experience_level: "",
   application_state: "",
+  posted_within_days: "",
 };
 
 const EMPLOYMENT_OPTIONS: Array<{ label: string; value: EmploymentType }> = [
@@ -64,6 +68,14 @@ const EXPERIENCE_OPTIONS: Array<{ label: string; value: ExperienceLevel }> = [
   { label: "Lead", value: "lead" },
 ];
 
+const POSTED_OPTIONS: Array<{ label: string; value: string }> = [
+  { label: "Past 24 hours", value: "1" },
+  { label: "Past 3 days", value: "3" },
+  { label: "Past week", value: "7" },
+  { label: "Past 2 weeks", value: "14" },
+  { label: "Past month", value: "30" },
+];
+
 function toSearchFilters(draft: FilterDraft): JobSearchFilters {
   return {
     q: draft.q.trim() || undefined,
@@ -72,6 +84,7 @@ function toSearchFilters(draft: FilterDraft): JobSearchFilters {
     work_mode: draft.work_mode || undefined,
     experience_level: draft.experience_level || undefined,
     application_state: draft.application_state || undefined,
+    posted_within_days: draft.posted_within_days || undefined,
   };
 }
 
@@ -275,6 +288,90 @@ function JobAttribute({ value }: { value: string | null }) {
   );
 }
 
+function formatPostedAt(value: string | null) {
+  if (!value) {
+    return null;
+  }
+
+  const postedAt = new Date(value);
+
+  if (Number.isNaN(postedAt.getTime())) {
+    return null;
+  }
+
+  const elapsedSeconds = Math.max(
+    0,
+    Math.floor((Date.now() - postedAt.getTime()) / 1000),
+  );
+
+  if (elapsedSeconds < 60) {
+    return "Posted just now";
+  }
+
+  const units: Array<{
+    seconds: number;
+    unit: Intl.RelativeTimeFormatUnit;
+  }> = [
+    { seconds: 2_592_000, unit: "month" },
+    { seconds: 604_800, unit: "week" },
+    { seconds: 86_400, unit: "day" },
+    { seconds: 3_600, unit: "hour" },
+    { seconds: 60, unit: "minute" },
+  ];
+  const formatter = new Intl.RelativeTimeFormat("en", { numeric: "auto" });
+  const match = units.find((candidate) => elapsedSeconds >= candidate.seconds);
+
+  if (!match) {
+    return "Posted just now";
+  }
+
+  return `Posted ${formatter.format(
+    -Math.floor(elapsedSeconds / match.seconds),
+    match.unit,
+  )}`;
+}
+
+function Pagination({
+  isLoading,
+  meta,
+  onPageChange,
+}: {
+  isLoading: boolean;
+  meta: PaginationMeta | null;
+  onPageChange: (page: number) => void;
+}) {
+  if (!meta || meta.last_page <= 1) {
+    return null;
+  }
+
+  return (
+    <nav
+      aria-label="Job results pages"
+      className="flex items-center justify-between gap-3 border-t border-[#ece9df] px-3 pb-1 pt-4"
+    >
+      <button
+        className="inline-flex h-9 items-center rounded-full border border-[#d8d5c8] bg-white px-3 text-sm font-semibold text-[#405047] transition hover:border-[#a9c878] hover:bg-[#eff9d1] disabled:cursor-not-allowed disabled:opacity-40"
+        disabled={isLoading || meta.current_page === 1}
+        onClick={() => onPageChange(meta.current_page - 1)}
+        type="button"
+      >
+        Previous
+      </button>
+      <span className="text-xs font-semibold text-[#657167]" aria-live="polite">
+        Page {meta.current_page} of {meta.last_page}
+      </span>
+      <button
+        className="inline-flex h-9 items-center rounded-full border border-[#d8d5c8] bg-white px-3 text-sm font-semibold text-[#405047] transition hover:border-[#a9c878] hover:bg-[#eff9d1] disabled:cursor-not-allowed disabled:opacity-40"
+        disabled={isLoading || meta.current_page === meta.last_page}
+        onClick={() => onPageChange(meta.current_page + 1)}
+        type="button"
+      >
+        Next
+      </button>
+    </nav>
+  );
+}
+
 export function JobsView({ publicMode = false }: { publicMode?: boolean }) {
   const { clearSession, token, user } = useAuth();
   const router = useRouter();
@@ -282,11 +379,14 @@ export function JobsView({ publicMode = false }: { publicMode?: boolean }) {
   const searchParams = useSearchParams();
 
   const [jobs, setJobs] = useState<HrJob[]>([]);
+  const [pagination, setPagination] = useState<PaginationMeta | null>(null);
+  const [page, setPage] = useState(1);
   const [draftFilters, setDraftFilters] = useState<FilterDraft>(EMPTY_FILTERS);
   const [activeFilters, setActiveFilters] = useState<JobSearchFilters>({});
   const [error, setError] = useState("");
+  const [successMessage, setSuccessMessage] = useState("");
   const [isLoading, setIsLoading] = useState(true);
-  const [applyingId, setApplyingId] = useState<number | null>(null);
+  const [applicationJobId, setApplicationJobId] = useState<number | null>(null);
 
   const selectedId = Number(searchParams.get("selected"));
   const selectedJob = useMemo(
@@ -316,11 +416,12 @@ export function JobsView({ publicMode = false }: { publicMode?: boolean }) {
     setError("");
 
     try {
-      const nextJobs = useCandidateJobs
-        ? await listCandidateJobs(token as string, activeFilters)
-        : await listPublicJobs(activeFilters);
+      const response = useCandidateJobs
+        ? await listCandidateJobs(token as string, activeFilters, page)
+        : await listPublicJobs(activeFilters, page);
 
-      setJobs(nextJobs);
+      setJobs(response.data);
+      setPagination(response.meta);
     } catch (cause) {
       if (isUnauthorizedError(cause)) {
         clearSession();
@@ -338,6 +439,7 @@ export function JobsView({ publicMode = false }: { publicMode?: boolean }) {
     activeFilters,
     clearSession,
     publicMode,
+    page,
     token,
     useCandidateJobs,
   ]);
@@ -358,16 +460,24 @@ export function JobsView({ publicMode = false }: { publicMode?: boolean }) {
 
   function submitFilters(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    setPage(1);
     setActiveFilters(toSearchFilters(draftFilters));
   }
 
   function clearFilters() {
     setDraftFilters(EMPTY_FILTERS);
+    setPage(1);
     setActiveFilters({});
   }
 
-  async function apply() {
-    if (!selectedJob || applyingId !== null || selectedJob.application_status) {
+  function chooseJob(id: number) {
+    setApplicationJobId(null);
+    setSuccessMessage("");
+    selectJob(id);
+  }
+
+  function openApplication() {
+    if (!selectedJob || selectedJob.application_status) {
       return;
     }
 
@@ -385,33 +495,25 @@ export function JobsView({ publicMode = false }: { publicMode?: boolean }) {
       return;
     }
 
-    setApplyingId(selectedJob.id);
     setError("");
+    setSuccessMessage("");
+    setApplicationJobId(selectedJob.id);
+  }
 
-    try {
-      const updatedJob = await applyToJob(token, selectedJob.id);
-      setJobs((current) => {
-        if (activeFilters.application_state === "not_applied") {
-          return current.filter((job) => job.id !== updatedJob.id);
-        }
-
-        return current.map((job) =>
-          job.id === updatedJob.id ? updatedJob : job,
-        );
-      });
-    } catch (cause) {
-      if (isUnauthorizedError(cause)) {
-        clearSession();
-      } else {
-        setError(
-          cause instanceof ApiError
-            ? cause.message
-            : "We couldn't submit your application. Please try again.",
-        );
+  function applied(updatedJob: HrJob) {
+    setJobs((current) => {
+      if (activeFilters.application_state === "not_applied") {
+        return current.filter((job) => job.id !== updatedJob.id);
       }
-    } finally {
-      setApplyingId(null);
-    }
+
+      return current.map((job) =>
+        job.id === updatedJob.id ? updatedJob : job,
+      );
+    });
+    setApplicationJobId(null);
+    setSuccessMessage(
+      `Application sent to ${updatedJob.company_name ?? "the hiring team"}.`,
+    );
   }
 
   return (
@@ -510,6 +612,24 @@ export function JobsView({ publicMode = false }: { publicMode?: boolean }) {
             options={EXPERIENCE_OPTIONS}
             value={draftFilters.experience_level}
           />
+          <FilterSelect
+            allLabel="Any posting date"
+            label="Date posted"
+            onChange={(value) =>
+              setDraftFilters((current) => ({
+                ...current,
+                posted_within_days: value
+                  ? (Number(value) as PostedWithinDays)
+                  : "",
+              }))
+            }
+            options={POSTED_OPTIONS}
+            value={
+              draftFilters.posted_within_days
+                ? String(draftFilters.posted_within_days)
+                : ""
+            }
+          />
           {!publicMode ? (
             <FilterSelect
               allLabel="Any application status"
@@ -549,6 +669,24 @@ export function JobsView({ publicMode = false }: { publicMode?: boolean }) {
         </div>
       ) : null}
 
+      {successMessage ? (
+        <div
+          className="mt-5 flex items-start gap-3 rounded-2xl border border-[#cfe39b] bg-[#f2fbdc] p-4 text-sm text-[#315000]"
+          role="status"
+        >
+          <span
+            aria-hidden="true"
+            className="mt-0.5 grid size-5 shrink-0 place-items-center rounded-full bg-[#588100] text-xs font-bold text-white"
+          >
+            ✓
+          </span>
+          <div>
+            <p className="font-semibold">Application submitted</p>
+            <p className="mt-0.5 leading-6">{successMessage}</p>
+          </div>
+        </div>
+      ) : null}
+
       <div className="mt-6 grid gap-5 lg:grid-cols-[minmax(300px,0.72fr)_minmax(0,1.28fr)]">
         <section
           aria-label="Job results"
@@ -558,7 +696,9 @@ export function JobsView({ publicMode = false }: { publicMode?: boolean }) {
             <h2 className="text-sm font-semibold text-[#20332a]" aria-live="polite">
               {isLoading
                 ? "Searching roles"
-                : `${jobs.length} open ${jobs.length === 1 ? "role" : "roles"}`}
+                : `${pagination?.total ?? jobs.length} open ${
+                    (pagination?.total ?? jobs.length) === 1 ? "role" : "roles"
+                  }`}
             </h2>
             <span className="text-xs font-medium text-[#657167]">
               Select a role
@@ -582,7 +722,7 @@ export function JobsView({ publicMode = false }: { publicMode?: boolean }) {
                       : "border-transparent hover:border-[#d8d5c8] hover:bg-[#fbfaf4]"
                   }`}
                   key={job.id}
-                  onClick={() => selectJob(job.id)}
+                  onClick={() => chooseJob(job.id)}
                   type="button"
                 >
                   <div className="flex items-start justify-between gap-3">
@@ -603,6 +743,19 @@ export function JobsView({ publicMode = false }: { publicMode?: boolean }) {
                   <p className="mt-1 text-sm text-[#657167]">
                     {job.location || "Location not specified"}
                   </p>
+                  {formatPostedAt(job.created_at) ? (
+                    <time
+                      className="mt-1 block text-xs font-semibold text-[#657167]"
+                      dateTime={job.created_at ?? undefined}
+                      title={
+                        job.created_at
+                          ? new Date(job.created_at).toLocaleString()
+                          : undefined
+                      }
+                    >
+                      {formatPostedAt(job.created_at)}
+                    </time>
+                  ) : null}
                   <div className="mt-3 flex flex-wrap gap-1.5">
                     <JobAttribute value={job.employment_type} />
                     <JobAttribute value={job.work_mode} />
@@ -635,6 +788,15 @@ export function JobsView({ publicMode = false }: { publicMode?: boolean }) {
               </div>
             ) : null}
           </div>
+          <Pagination
+            isLoading={isLoading}
+            meta={pagination}
+            onPageChange={(nextPage) => {
+              setApplicationJobId(null);
+              setSuccessMessage("");
+              setPage(nextPage);
+            }}
+          />
         </section>
 
         <section className="min-h-[520px] overflow-hidden rounded-[24px] border border-[#e1ded1] bg-white shadow-sm">
@@ -654,6 +816,19 @@ export function JobsView({ publicMode = false }: { publicMode?: boolean }) {
                     <p className="mt-2 text-sm font-medium text-[#405047]">
                       {selectedJob.location || "Location not specified"}
                     </p>
+                    {formatPostedAt(selectedJob.created_at) ? (
+                      <time
+                        className="mt-2 block text-xs font-semibold text-[#657167]"
+                        dateTime={selectedJob.created_at ?? undefined}
+                        title={
+                          selectedJob.created_at
+                            ? new Date(selectedJob.created_at).toLocaleString()
+                            : undefined
+                        }
+                      >
+                        {formatPostedAt(selectedJob.created_at)}
+                      </time>
+                    ) : null}
                     <div className="mt-4 flex flex-wrap gap-2">
                       <JobAttribute value={selectedJob.employment_type} />
                       <JobAttribute value={selectedJob.work_mode} />
@@ -666,19 +841,16 @@ export function JobsView({ publicMode = false }: { publicMode?: boolean }) {
                     </span>
                     <button
                       className="h-10 rounded-full bg-[#062b1f] px-4 text-sm font-semibold text-[#f7f5ec] transition hover:bg-[#031a13] disabled:cursor-not-allowed disabled:opacity-60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#a6f20f]"
-                      disabled={
-                        applyingId !== null ||
-                        Boolean(selectedJob.application_status)
-                      }
-                      onClick={() => void apply()}
+                      disabled={Boolean(selectedJob.application_status)}
+                      onClick={openApplication}
                       type="button"
                     >
-                      {applyingId === selectedJob.id
-                        ? "Applying..."
-                        : selectedJob.application_status
-                          ? formatValue(selectedJob.application_status)
-                          : !token
-                            ? "Sign in to apply"
+                      {selectedJob.application_status
+                        ? formatValue(selectedJob.application_status)
+                        : !token
+                          ? "Sign in to apply"
+                          : applicationJobId === selectedJob.id
+                            ? "Application open"
                             : "Apply"}
                     </button>
                   </div>
@@ -686,6 +858,14 @@ export function JobsView({ publicMode = false }: { publicMode?: boolean }) {
               </header>
 
               <div className="max-h-[520px] overflow-y-auto p-6 sm:p-8">
+                {applicationJobId === selectedJob.id ? (
+                  <JobApplicationPanel
+                    job={selectedJob}
+                    onApplied={applied}
+                    onCancel={() => setApplicationJobId(null)}
+                  />
+                ) : null}
+
                 {selectedJob.summary ? (
                   <p className="text-base leading-7 text-[#405047]">
                     {selectedJob.summary}

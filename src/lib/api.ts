@@ -41,6 +41,7 @@ export type Company = {
 
 export type JobStatus = "draft" | "open" | "closed";
 export type JobApplicationState = "applied" | "not_applied";
+export type PostedWithinDays = 1 | 3 | 7 | 14 | 30;
 export type JobSearchFilters = {
   q?: string;
   skill?: string;
@@ -48,6 +49,7 @@ export type JobSearchFilters = {
   work_mode?: WorkMode;
   experience_level?: "junior" | "mid" | "senior" | "lead";
   application_state?: JobApplicationState;
+  posted_within_days?: PostedWithinDays;
 };
 export type HrJob = {
   id: number;
@@ -65,9 +67,104 @@ export type HrJob = {
   opens_at: string | null;
   closes_at: string | null;
   accepting_applications: boolean;
+  submissions_count?: number;
   application_status?: ApplicationStatus | null;
+  created_at: string | null;
+  updated_at: string | null;
 };
-export type UpsertHrJobPayload = Omit<HrJob, "id" | "accepting_applications">;
+export type UpsertHrJobPayload = Omit<
+  HrJob,
+  | "id"
+  | "accepting_applications"
+  | "submissions_count"
+  | "created_at"
+  | "updated_at"
+>;
+
+export type JobSubmissionStatus =
+  | "new"
+  | "screening"
+  | "interview"
+  | "offer"
+  | "hired"
+  | "rejected";
+
+export type JobSubmissionSource =
+  | "applyai"
+  | "gmail"
+  | "linkedin_email"
+  | "indeed_email"
+  | "other_email";
+
+export type JobSubmissionDocument = {
+  id: number;
+  type: "resume" | "cover_letter" | "other";
+  original_filename: string;
+  mime_type: string;
+  file_size: number;
+  download_url: string;
+};
+
+export type JobSubmissionMatch = {
+  status: "pending" | "processing" | "completed" | "failed";
+  overall_score: number | null;
+  skills_score: number | null;
+  experience_score: number | null;
+  matched_requirements: string[] | null;
+  missing_requirements: string[] | null;
+  strengths: string[] | null;
+  concerns: string[] | null;
+  summary: string | null;
+  error_message: string | null;
+  analyzed_at: string | null;
+};
+
+export type JobSubmission = {
+  id: number;
+  job: {
+    id: number;
+    title: string;
+    company_name: string;
+  };
+  candidate_user_id: number | null;
+  source: JobSubmissionSource;
+  source_reference: string | null;
+  applicant_name: string;
+  applicant_email: string;
+  applicant_phone: string | null;
+  status: JobSubmissionStatus;
+  cover_letter: string | null;
+  notes: string | null;
+  documents: JobSubmissionDocument[];
+  match: JobSubmissionMatch | null;
+  submitted_at: string | null;
+  created_at: string | null;
+  updated_at: string | null;
+};
+
+export type JobSubmissionFilters = {
+  q?: string;
+  job_id?: number;
+  status?: JobSubmissionStatus;
+  source?: JobSubmissionSource;
+  sort?: "submitted_at" | "match_score";
+  direction?: "asc" | "desc";
+};
+
+export type UpdateJobSubmissionPayload = {
+  status?: JobSubmissionStatus;
+  notes?: string | null;
+};
+
+export type HrJobOption = {
+  id: number;
+  title: string;
+};
+
+export type SubmitJobApplicationPayload = {
+  resume_id: number;
+  cover_letter?: string | null;
+};
 
 export type CandidateProfile = {
   id: number;
@@ -194,6 +291,7 @@ export type Application = {
   id: number;
   analysis_id: number | null;
   job_post_id: number | null;
+  job_submission_id: number | null;
   company_name: string;
   job_title: string;
   job_url: string | null;
@@ -230,6 +328,18 @@ export type MoveApplicationPayload = {
 
 type CollectionResponse<T> = { data: T[] };
 type ResourceResponse<T> = { data: T };
+export type PaginationMeta = {
+  current_page: number;
+  from: number | null;
+  last_page: number;
+  per_page: number;
+  to: number | null;
+  total: number;
+};
+export type PaginatedResponse<T> = {
+  data: T[];
+  meta: PaginationMeta;
+};
 
 export type FieldErrors = Record<string, string>;
 
@@ -293,8 +403,11 @@ function safeFieldMessage(field: string, message: string | undefined, status: nu
   }
 
   if (field === "resume_id") {
-    // Backend messages here are user-safe (e.g. resume not parsed yet).
-    return message ?? "Select a parsed resume.";
+    return message ?? "Select a resume from your library.";
+  }
+
+  if (field === "cover_letter") {
+    return "Keep your cover letter to 10,000 characters or fewer.";
   }
 
   if (field === "job_title") {
@@ -526,8 +639,28 @@ export async function getHrCompany(token: string) {
   return response.data;
 }
 
-export async function listHrJobs(token: string) {
-  const response = await apiRequest<CollectionResponse<HrJob>>("/api/hr/jobs", { method: "GET", token });
+export async function listHrJobs(token: string, page = 1, perPage = 10) {
+  return apiRequest<PaginatedResponse<HrJob>>(
+    `/api/hr/jobs?page=${page}&per_page=${perPage}`,
+    { method: "GET", token },
+  );
+}
+
+export async function getHrJob(token: string, id: number) {
+  const response = await apiRequest<ResourceResponse<HrJob>>(
+    `/api/hr/jobs/${id}`,
+    { method: "GET", token },
+  );
+
+  return response.data;
+}
+
+export async function listHrJobOptions(token: string) {
+  const response = await apiRequest<CollectionResponse<HrJobOption>>(
+    "/api/hr/jobs/options",
+    { method: "GET", token },
+  );
+
   return response.data;
 }
 
@@ -545,14 +678,21 @@ export function deleteHrJob(token: string, id: number) {
   return apiRequest<void>(`/api/hr/jobs/${id}`, { method: "DELETE", token });
 }
 
-function jobSearchParams(filters: JobSearchFilters, preferences = false) {
+function jobSearchParams(
+  filters: JobSearchFilters,
+  page = 1,
+  perPage = 10,
+  preferences = false,
+) {
   const params = new URLSearchParams();
 
   if (preferences) params.set("match_preferences", "1");
+  params.set("page", String(page));
+  params.set("per_page", String(perPage));
 
   for (const [key, value] of Object.entries(filters)) {
     if (value) {
-      params.set(key, value);
+      params.set(key, String(value));
     }
   }
 
@@ -562,11 +702,14 @@ function jobSearchParams(filters: JobSearchFilters, preferences = false) {
 export async function listCandidateJobs(
   token: string,
   filters: JobSearchFilters = {},
-  preferences = false,
+  page = 1,
+  perPage = 10,
 ) {
-  const params = jobSearchParams(filters, preferences);
-  const response = await apiRequest<CollectionResponse<HrJob>>(`/api/candidate/jobs?${params}`, { method: "GET", token });
-  return response.data;
+  const params = jobSearchParams(filters, page, perPage);
+  return apiRequest<PaginatedResponse<HrJob>>(
+    `/api/candidate/jobs?${params}`,
+    { method: "GET", token },
+  );
 }
 
 export async function getCandidateJob(token: string, id: number) {
@@ -574,8 +717,13 @@ export async function getCandidateJob(token: string, id: number) {
   return response.data;
 }
 
-export async function applyToJob(token: string, id: number) {
+export async function applyToJob(
+  token: string,
+  id: number,
+  payload: SubmitJobApplicationPayload,
+) {
   const response = await apiRequest<ResourceResponse<HrJob>>(`/api/candidate/jobs/${id}/apply`, {
+    body: payload,
     method: "POST",
     token,
   });
@@ -583,10 +731,85 @@ export async function applyToJob(token: string, id: number) {
   return response.data;
 }
 
-export async function listPublicJobs(filters: JobSearchFilters = {}) {
-  const params = jobSearchParams(filters);
-  const response = await apiRequest<CollectionResponse<HrJob>>(`/api/jobs?${params}`, { method: "GET" });
+export async function listHrSubmissions(
+  token: string,
+  filters: JobSubmissionFilters = {},
+  page = 1,
+  perPage = 10,
+) {
+  const params = new URLSearchParams({
+    page: String(page),
+    per_page: String(perPage),
+  });
+
+  for (const [key, value] of Object.entries(filters)) {
+    if (value) {
+      params.set(key, String(value));
+    }
+  }
+
+  return apiRequest<PaginatedResponse<JobSubmission>>(
+    `/api/hr/submissions?${params}`,
+    { method: "GET", token },
+  );
+}
+
+export async function updateHrSubmission(
+  token: string,
+  id: number,
+  payload: UpdateJobSubmissionPayload,
+) {
+  const response = await apiRequest<ResourceResponse<JobSubmission>>(
+    `/api/hr/submissions/${id}`,
+    { body: payload, method: "PATCH", token },
+  );
+
   return response.data;
+}
+
+export async function reanalyzeHrSubmission(token: string, id: number) {
+  const response = await apiRequest<ResourceResponse<JobSubmission>>(
+    `/api/hr/submissions/${id}/reanalyze`,
+    { method: "POST", token },
+  );
+
+  return response.data;
+}
+
+export async function downloadHrSubmissionDocument(
+  token: string,
+  submissionId: number,
+  document: JobSubmissionDocument,
+) {
+  const response = await fetch(
+    `${API_BASE_URL}/api/hr/submissions/${submissionId}/documents/${document.id}`,
+    {
+      headers: {
+        Accept: document.mime_type,
+        Authorization: `Bearer ${token}`,
+      },
+    },
+  );
+
+  if (!response.ok) {
+    throw new ApiError({
+      message: messageForStatus(response.status, undefined),
+      status: response.status,
+    });
+  }
+
+  return response.blob();
+}
+
+export async function listPublicJobs(
+  filters: JobSearchFilters = {},
+  page = 1,
+  perPage = 10,
+) {
+  const params = jobSearchParams(filters, page, perPage);
+  return apiRequest<PaginatedResponse<HrJob>>(`/api/jobs?${params}`, {
+    method: "GET",
+  });
 }
 
 export async function listResumes(token: string) {
