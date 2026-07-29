@@ -1,6 +1,14 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type FormEvent,
+  type KeyboardEvent,
+} from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
   ApiError,
@@ -74,42 +82,184 @@ function formatValue(value: string) {
 }
 
 function FilterSelect({
+  allLabel,
   label,
   onChange,
   options,
   value,
 }: {
+  allLabel: string;
   label: string;
   onChange: (value: string) => void;
   options: Array<{ label: string; value: string }>;
   value: string;
 }) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const optionRefs = useRef<Array<HTMLButtonElement | null>>([]);
+  const [isOpen, setIsOpen] = useState(false);
+  const selectedOption = options.find((option) => option.value === value);
+  const menuOptions = [{ label: allLabel, value: "" }, ...options];
+
+  useEffect(() => {
+    if (!isOpen) {
+      return;
+    }
+
+    function closeOnOutsidePress(event: PointerEvent) {
+      if (
+        containerRef.current &&
+        !containerRef.current.contains(event.target as Node)
+      ) {
+        setIsOpen(false);
+      }
+    }
+
+    function closeOnEscape(event: globalThis.KeyboardEvent) {
+      if (event.key === "Escape") {
+        setIsOpen(false);
+        triggerRef.current?.focus();
+      }
+    }
+
+    document.addEventListener("pointerdown", closeOnOutsidePress);
+    document.addEventListener("keydown", closeOnEscape);
+
+    return () => {
+      document.removeEventListener("pointerdown", closeOnOutsidePress);
+      document.removeEventListener("keydown", closeOnEscape);
+    };
+  }, [isOpen]);
+
+  function focusOption(index: number) {
+    const normalizedIndex =
+      (index + menuOptions.length) % menuOptions.length;
+    optionRefs.current[normalizedIndex]?.focus();
+  }
+
+  function openAndFocus(index: number) {
+    setIsOpen(true);
+    window.requestAnimationFrame(() => focusOption(index));
+  }
+
+  function selectedIndex() {
+    const index = menuOptions.findIndex((option) => option.value === value);
+    return index < 0 ? 0 : index;
+  }
+
+  function handleTriggerKeyDown(event: KeyboardEvent<HTMLButtonElement>) {
+    if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+      event.preventDefault();
+      openAndFocus(selectedIndex());
+    }
+  }
+
+  function handleOptionKeyDown(
+    event: KeyboardEvent<HTMLButtonElement>,
+    index: number,
+  ) {
+    if (event.key === "ArrowDown") {
+      event.preventDefault();
+      focusOption(index + 1);
+    } else if (event.key === "ArrowUp") {
+      event.preventDefault();
+      focusOption(index - 1);
+    } else if (event.key === "Home") {
+      event.preventDefault();
+      focusOption(0);
+    } else if (event.key === "End") {
+      event.preventDefault();
+      focusOption(menuOptions.length - 1);
+    }
+  }
+
   return (
-    <label className="relative">
-      <span className="sr-only">{label}</span>
-      <select
-        className={`h-10 appearance-none rounded-full border py-0 pl-4 pr-9 text-sm font-semibold outline-none transition focus:border-[#588100] focus:ring-4 focus:ring-[#a6f20f]/20 ${
+    <div className="relative" ref={containerRef}>
+      <button
+        aria-expanded={isOpen}
+        aria-haspopup="menu"
+        aria-label={`${label}: ${selectedOption?.label ?? allLabel}`}
+        className={`inline-flex h-10 items-center gap-2 rounded-full border px-4 text-sm font-semibold outline-none transition focus-visible:ring-4 focus-visible:ring-[#a6f20f]/20 ${
           value
             ? "border-[#a9c878] bg-[#eff9d1] text-[#20332a]"
             : "border-[#d8d5c8] bg-white text-[#405047] hover:border-[#b7b29f]"
         }`}
-        onChange={(event) => onChange(event.target.value)}
-        value={value}
+        onClick={() => setIsOpen((open) => !open)}
+        onKeyDown={handleTriggerKeyDown}
+        ref={triggerRef}
+        type="button"
       >
-        <option value="">{label}</option>
-        {options.map((option) => (
-          <option key={option.value} value={option.value}>
-            {option.label}
-          </option>
-        ))}
-      </select>
-      <span
-        aria-hidden="true"
-        className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs text-[#657167]"
-      >
-        ▾
-      </span>
-    </label>
+        <span>{selectedOption?.label ?? label}</span>
+        <svg
+          aria-hidden="true"
+          className={`size-4 text-[#657167] transition-transform duration-150 ${
+            isOpen ? "rotate-180" : ""
+          }`}
+          fill="none"
+          stroke="currentColor"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeWidth={2}
+          viewBox="0 0 24 24"
+        >
+          <path d="m7 10 5 5 5-5" />
+        </svg>
+      </button>
+
+      {isOpen ? (
+        <div
+          aria-label={label}
+          className="absolute left-0 top-[calc(100%+0.5rem)] z-30 w-[min(17rem,calc(100vw-2.5rem))] rounded-2xl border border-[#dedacd] bg-white p-1.5 shadow-[0_18px_45px_rgba(6,43,31,0.16)]"
+          role="menu"
+        >
+          <p className="px-3 pb-1.5 pt-2 text-xs font-semibold text-[#657167]">
+            {label}
+          </p>
+          {menuOptions.map((option, index) => {
+            const isSelected = option.value === value;
+
+            return (
+              <button
+                aria-checked={isSelected}
+                className={`flex w-full items-center justify-between gap-4 rounded-xl px-3 py-2.5 text-left text-sm font-medium transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[#588100] ${
+                  isSelected
+                    ? "bg-[#e1edc5] text-[#20332a] hover:bg-[#d5e5b2]"
+                    : "text-[#405047] hover:bg-[#eff9d1] hover:text-[#062b1f] focus-visible:bg-[#eff9d1]"
+                }`}
+                key={option.value || "all"}
+                onClick={() => {
+                  onChange(option.value);
+                  setIsOpen(false);
+                  triggerRef.current?.focus();
+                }}
+                onKeyDown={(event) => handleOptionKeyDown(event, index)}
+                ref={(node) => {
+                  optionRefs.current[index] = node;
+                }}
+                role="menuitemradio"
+                type="button"
+              >
+                <span>{option.label}</span>
+                {isSelected ? (
+                  <svg
+                    aria-hidden="true"
+                    className="size-4 shrink-0 text-[#588100]"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2.2}
+                    viewBox="0 0 24 24"
+                  >
+                    <path d="m5 12 4 4L19 6" />
+                  </svg>
+                ) : null}
+              </button>
+            );
+          })}
+        </div>
+      ) : null}
+    </div>
   );
 }
 
@@ -134,8 +284,6 @@ export function JobsView({ publicMode = false }: { publicMode?: boolean }) {
   const [jobs, setJobs] = useState<HrJob[]>([]);
   const [draftFilters, setDraftFilters] = useState<FilterDraft>(EMPTY_FILTERS);
   const [activeFilters, setActiveFilters] = useState<JobSearchFilters>({});
-  const [matchPreferences, setMatchPreferences] = useState(false);
-  const [activeMatchPreferences, setActiveMatchPreferences] = useState(false);
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [applyingId, setApplyingId] = useState<number | null>(null);
@@ -148,9 +296,7 @@ export function JobsView({ publicMode = false }: { publicMode?: boolean }) {
   const isCandidate = user?.account_type === "candidate";
   const useCandidateJobs = !publicMode || isCandidate;
 
-  const activeFilterCount =
-    Object.values(activeFilters).filter(Boolean).length +
-    (activeMatchPreferences ? 1 : 0);
+  const activeFilterCount = Object.values(activeFilters).filter(Boolean).length;
 
   const selectJob = useCallback(
     (id: number) => {
@@ -171,11 +317,7 @@ export function JobsView({ publicMode = false }: { publicMode?: boolean }) {
 
     try {
       const nextJobs = useCandidateJobs
-        ? await listCandidateJobs(
-            token as string,
-            activeFilters,
-            activeMatchPreferences,
-          )
+        ? await listCandidateJobs(token as string, activeFilters)
         : await listPublicJobs(activeFilters);
 
       setJobs(nextJobs);
@@ -194,7 +336,6 @@ export function JobsView({ publicMode = false }: { publicMode?: boolean }) {
     }
   }, [
     activeFilters,
-    activeMatchPreferences,
     clearSession,
     publicMode,
     token,
@@ -218,14 +359,11 @@ export function JobsView({ publicMode = false }: { publicMode?: boolean }) {
   function submitFilters(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setActiveFilters(toSearchFilters(draftFilters));
-    setActiveMatchPreferences(matchPreferences);
   }
 
   function clearFilters() {
     setDraftFilters(EMPTY_FILTERS);
     setActiveFilters({});
-    setMatchPreferences(false);
-    setActiveMatchPreferences(false);
   }
 
   async function apply() {
@@ -337,6 +475,7 @@ export function JobsView({ publicMode = false }: { publicMode?: boolean }) {
 
         <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-[#ece9df] pt-4">
           <FilterSelect
+            allLabel="Any employment type"
             label="Employment type"
             onChange={(value) =>
               setDraftFilters((current) => ({
@@ -348,6 +487,7 @@ export function JobsView({ publicMode = false }: { publicMode?: boolean }) {
             value={draftFilters.employment_type}
           />
           <FilterSelect
+            allLabel="Any work mode"
             label="Work mode"
             onChange={(value) =>
               setDraftFilters((current) => ({
@@ -359,6 +499,7 @@ export function JobsView({ publicMode = false }: { publicMode?: boolean }) {
             value={draftFilters.work_mode}
           />
           <FilterSelect
+            allLabel="Any experience level"
             label="Experience"
             onChange={(value) =>
               setDraftFilters((current) => ({
@@ -371,6 +512,7 @@ export function JobsView({ publicMode = false }: { publicMode?: boolean }) {
           />
           {!publicMode ? (
             <FilterSelect
+              allLabel="Any application status"
               label="Application"
               onChange={(value) =>
                 setDraftFilters((current) => ({
@@ -384,23 +526,6 @@ export function JobsView({ publicMode = false }: { publicMode?: boolean }) {
               ]}
               value={draftFilters.application_state}
             />
-          ) : null}
-          {!publicMode ? (
-            <label
-              className={`inline-flex h-10 items-center gap-2 rounded-full border px-4 text-sm font-semibold transition ${
-                matchPreferences
-                  ? "border-[#a9c878] bg-[#eff9d1] text-[#20332a]"
-                  : "border-[#d8d5c8] bg-white text-[#405047]"
-              }`}
-            >
-              <input
-                checked={matchPreferences}
-                className="accent-[#588100]"
-                onChange={(event) => setMatchPreferences(event.target.checked)}
-                type="checkbox"
-              />
-              Match my preferences
-            </label>
           ) : null}
           {activeFilterCount > 0 ? (
             <button
