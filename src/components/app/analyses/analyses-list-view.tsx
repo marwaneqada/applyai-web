@@ -11,6 +11,11 @@ import {
   type Analysis,
 } from "@/lib/api";
 import { useAuth } from "@/contexts/auth-context";
+import { useRealtimeEvent } from "@/contexts/realtime-context";
+import {
+  ANALYSIS_STATUS_EVENT,
+  type AnalysisStatusEvent,
+} from "@/lib/realtime";
 import { useTour } from "@/components/app/tour/tour-context";
 import {
   AnalysisStatusBadge,
@@ -83,6 +88,10 @@ export function AnalysesListView() {
   useEffect(() => {
     void Promise.resolve().then(load);
   }, [load]);
+
+  useRealtimeEvent<AnalysisStatusEvent>(ANALYSIS_STATUS_EVENT, () => {
+    void load();
+  });
 
   function retry() {
     setLoadStatus("loading");

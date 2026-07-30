@@ -19,6 +19,11 @@ import {
   type ApplicationStatus,
 } from "@/lib/api";
 import { useAuth } from "@/contexts/auth-context";
+import { useRealtimeEvent } from "@/contexts/realtime-context";
+import {
+  APPLICATION_STATUS_EVENT,
+  type ApplicationStatusEvent,
+} from "@/lib/realtime";
 import { useTour } from "@/components/app/tour/tour-context";
 import { ApplicationFormModal } from "./application-form-modal";
 import {
@@ -46,8 +51,10 @@ function cloneBoard(board: ApplicationBoard): ApplicationBoard {
   return {
     saved: [...board.saved],
     applied: [...board.applied],
+    screening: [...board.screening],
     interview: [...board.interview],
     offer: [...board.offer],
+    hired: [...board.hired],
     rejected: [...board.rejected],
   };
 }
@@ -157,6 +164,10 @@ export function ApplicationsBoardView() {
   useEffect(() => {
     void Promise.resolve().then(load);
   }, [load]);
+
+  useRealtimeEvent<ApplicationStatusEvent>(APPLICATION_STATUS_EVENT, () => {
+    void load();
+  });
 
   function closeMenu() {
     setMenu(null);

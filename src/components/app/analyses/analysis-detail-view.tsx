@@ -12,13 +12,18 @@ import {
   type Application,
 } from "@/lib/api";
 import { useAuth } from "@/contexts/auth-context";
+import { useRealtimeEvent } from "@/contexts/realtime-context";
+import {
+  ANALYSIS_STATUS_EVENT,
+  type AnalysisStatusEvent,
+} from "@/lib/realtime";
 import { ApplicationFormModal } from "@/components/app/applications/application-form-modal";
 import { AnalysisResults } from "./analysis-results";
 import { AnalysisStatusBadge, formatDate, motionEase } from "./analysis-shared";
 import { ResumePdfPanel } from "./resume-pdf-panel";
 
-const POLL_INTERVAL_MS = 2500;
-const MAX_POLLS = 48;
+const FALLBACK_POLL_INTERVAL_MS = 30_000;
+const MAX_FALLBACK_POLLS = 20;
 
 type LoadStatus = "loading" | "ready" | "error";
 
@@ -72,6 +77,21 @@ export function AnalysisDetailView({ analysisId }: { analysisId: number }) {
     void Promise.resolve().then(load);
   }, [load]);
 
+  useRealtimeEvent<AnalysisStatusEvent>(ANALYSIS_STATUS_EVENT, (payload) => {
+    if (payload.analysis_id !== analysisId) {
+      return;
+    }
+
+    setPollTimedOut(false);
+    setAnalysis((current) =>
+      current ? { ...current, status: payload.status, error_message: payload.error_message } : current,
+    );
+
+    if (payload.status === "completed" || payload.status === "failed") {
+      void load();
+    }
+  });
+
   const isPending =
     analysis?.status === "pending" || analysis?.status === "processing";
 
@@ -110,15 +130,15 @@ export function AnalysisDetailView({ analysisId }: { analysisId: number }) {
         return;
       }
 
-      if (attempts >= MAX_POLLS) {
+      if (attempts >= MAX_FALLBACK_POLLS) {
         setPollTimedOut(true);
         return;
       }
 
-      timer = setTimeout(() => void tick(), POLL_INTERVAL_MS);
+      timer = setTimeout(() => void tick(), FALLBACK_POLL_INTERVAL_MS);
     };
 
-    timer = setTimeout(() => void tick(), POLL_INTERVAL_MS);
+    timer = setTimeout(() => void tick(), FALLBACK_POLL_INTERVAL_MS);
 
     return () => {
       active = false;

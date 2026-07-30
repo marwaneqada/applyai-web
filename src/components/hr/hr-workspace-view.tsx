@@ -129,7 +129,11 @@ export function HrWorkspaceView() {
         </div>
 
         <section className="mt-6 rounded-[28px] border border-[#e1ded1] bg-white p-6 shadow-sm sm:p-8">
-          {activeSection === "jobs" ? <HrJobsPanel /> : <HrApplicantsPanel />}
+          {activeSection === "jobs" ? (
+            <HrJobsPanel />
+          ) : (
+            <HrApplicantsPanel companyId={company?.id} />
+          )}
         </section>
       </div>
     </main>

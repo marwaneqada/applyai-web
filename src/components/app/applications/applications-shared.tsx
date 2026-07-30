@@ -5,8 +5,10 @@ export const motionEase = [0.22, 1, 0.36, 1] as const;
 export const STATUS_ORDER: ApplicationStatus[] = [
   "saved",
   "applied",
+  "screening",
   "interview",
   "offer",
+  "hired",
   "rejected",
 ];
 
@@ -24,6 +26,11 @@ export const statusMeta: Record<
     dotClassName: "bg-[#2f80b8]",
     chipClassName: "border-[#cfe3f0] bg-[#eef6fb] text-[#215273]",
   },
+  screening: {
+    label: "Screening",
+    dotClassName: "bg-[#557e71]",
+    chipClassName: "border-[#cfded9] bg-[#edf5f2] text-[#235046]",
+  },
   interview: {
     label: "Interview",
     dotClassName: "bg-[#c69220]",
@@ -33,6 +40,11 @@ export const statusMeta: Record<
     label: "Offer",
     dotClassName: "bg-[#4a8f16]",
     chipClassName: "border-[#d9e9c5] bg-[#f2ffd4] text-[#315000]",
+  },
+  hired: {
+    label: "Hired",
+    dotClassName: "bg-[#315000]",
+    chipClassName: "border-[#cfe3aa] bg-[#eaf8c9] text-[#264500]",
   },
   rejected: {
     label: "Rejected",

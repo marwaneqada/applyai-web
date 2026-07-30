@@ -94,7 +94,7 @@ export function HrJobApplicantsView() {
             </header>
 
             <section className="mt-7 rounded-[28px] border border-[#e1ded1] bg-white p-6 shadow-sm sm:p-8">
-              <HrApplicantsPanel jobId={job.id} />
+              <HrApplicantsPanel companyId={job.company_id} jobId={job.id} />
             </section>
           </>
         ) : (

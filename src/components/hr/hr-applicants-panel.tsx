@@ -24,6 +24,7 @@ import {
   type PaginationMeta,
 } from "@/lib/api";
 import { useAuth } from "@/contexts/auth-context";
+import { useCompanyRealtime } from "@/contexts/realtime-context";
 
 const STATUS_OPTIONS: Array<{ label: string; value: JobSubmissionStatus }> = [
   { label: "New", value: "new" },
@@ -193,7 +194,13 @@ function FilterMenu({
   );
 }
 
-export function HrApplicantsPanel({ jobId }: { jobId?: number }) {
+export function HrApplicantsPanel({
+  companyId,
+  jobId,
+}: {
+  companyId?: number;
+  jobId?: number;
+}) {
   const { clearSession, token } = useAuth();
   const selectedIdRef = useRef<number | null>(null);
   const jobsRef = useRef<HrJobOption[]>([]);
@@ -221,12 +228,14 @@ export function HrApplicantsPanel({ jobId }: { jobId?: number }) {
     [selectedId, submissions],
   );
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (silent = false) => {
     if (!token) {
       return;
     }
 
-    setLoading(true);
+    if (!silent) {
+      setLoading(true);
+    }
     setError("");
 
     try {
@@ -263,13 +272,21 @@ export function HrApplicantsPanel({ jobId }: { jobId?: number }) {
         );
       }
     } finally {
-      setLoading(false);
+      if (!silent) {
+        setLoading(false);
+      }
     }
   }, [clearSession, filters, jobId, page, token]);
 
   useEffect(() => {
-    void Promise.resolve().then(load);
+    void Promise.resolve().then(() => load());
   }, [load]);
+
+  useCompanyRealtime(companyId, (payload) => {
+    if (!jobId || payload.job_id === jobId) {
+      void load(true);
+    }
+  });
 
   useEffect(() => {
     if (!submissions.some((submission) =>
@@ -278,7 +295,7 @@ export function HrApplicantsPanel({ jobId }: { jobId?: number }) {
       return;
     }
 
-    const timer = window.setInterval(() => void load(), 5000);
+    const timer = window.setInterval(() => void load(true), 30_000);
 
     return () => window.clearInterval(timer);
   }, [load, submissions]);

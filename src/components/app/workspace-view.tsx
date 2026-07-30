@@ -13,6 +13,13 @@ import {
   type Resume,
 } from "@/lib/api";
 import { useAuth } from "@/contexts/auth-context";
+import { useRealtimeEvent } from "@/contexts/realtime-context";
+import {
+  ANALYSIS_STATUS_EVENT,
+  APPLICATION_STATUS_EVENT,
+  type AnalysisStatusEvent,
+  type ApplicationStatusEvent,
+} from "@/lib/realtime";
 import { useTour } from "@/components/app/tour/tour-context";
 import {
   AnalysisStatusBadge,
@@ -193,6 +200,13 @@ export function WorkspaceView() {
       setStatus("error");
     }
   }, [token]);
+
+  useRealtimeEvent<AnalysisStatusEvent>(ANALYSIS_STATUS_EVENT, () => {
+    void load();
+  });
+  useRealtimeEvent<ApplicationStatusEvent>(APPLICATION_STATUS_EVENT, () => {
+    void load();
+  });
 
   useEffect(() => {
     void Promise.resolve().then(load);

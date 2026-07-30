@@ -75,6 +75,10 @@ Open [http://localhost:3000](http://localhost:3000).
 | Variable | Description |
 | --- | --- |
 | `NEXT_PUBLIC_API_URL` | Base URL of the ApplyAI API (the client appends `/api`). |
+| `NEXT_PUBLIC_REVERB_APP_KEY` | Public Reverb application key. |
+| `NEXT_PUBLIC_REVERB_HOST` | Public hostname of the Reverb WebSocket server. |
+| `NEXT_PUBLIC_REVERB_PORT` | Public WebSocket port (`8080` locally, usually `443` in production). |
+| `NEXT_PUBLIC_REVERB_SCHEME` | WebSocket transport scheme (`http` locally, `https` in production). |
 
 ## 📜 Scripts
 

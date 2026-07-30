@@ -53,6 +53,7 @@ export type JobSearchFilters = {
 };
 export type HrJob = {
   id: number;
+  company_id: number;
   title: string;
   summary: string | null;
   company_name?: string;
@@ -75,8 +76,11 @@ export type HrJob = {
 export type UpsertHrJobPayload = Omit<
   HrJob,
   | "id"
+  | "company_id"
+  | "company_name"
   | "accepting_applications"
   | "submissions_count"
+  | "application_status"
   | "created_at"
   | "updated_at"
 >;
@@ -283,8 +287,10 @@ export type ResumeStructureState = {
 export type ApplicationStatus =
   | "saved"
   | "applied"
+  | "screening"
   | "interview"
   | "offer"
+  | "hired"
   | "rejected";
 
 export type Application = {
