@@ -428,6 +428,50 @@ function safeFieldMessage(field: string, message: string | undefined, status: nu
     return "Enter a valid URL, or leave it blank.";
   }
 
+  if (field === "title") {
+    return "Enter a job title.";
+  }
+
+  if (field === "summary") {
+    return "Write a card summary between 20 and 300 characters.";
+  }
+
+  if (field === "description") {
+    return "Write a job description with at least 50 characters.";
+  }
+
+  if (field === "status") {
+    return "Choose a valid job status.";
+  }
+
+  if (field === "opens_at") {
+    return message ?? "Choose when applications open.";
+  }
+
+  if (field === "closes_at") {
+    return message ?? "Choose when applications close.";
+  }
+
+  if (field === "required_skills" || field.startsWith("required_skills.")) {
+    return "Add valid required skills, one at a time.";
+  }
+
+  if (field === "preferred_skills" || field.startsWith("preferred_skills.")) {
+    return "Add valid preferred skills, one at a time.";
+  }
+
+  if (field === "experience_level") {
+    return "Choose a valid experience level.";
+  }
+
+  if (field === "work_mode") {
+    return "Choose a valid work mode.";
+  }
+
+  if (field === "employment_type") {
+    return "Choose a valid employment type.";
+  }
+
   if (field === "company_name") {
     return "Enter the company name.";
   }
