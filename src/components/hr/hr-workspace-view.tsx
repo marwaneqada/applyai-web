@@ -6,6 +6,7 @@ import { ApiError, getHrCompany, isUnauthorizedError, type Company } from "@/lib
 import { useAuth } from "@/contexts/auth-context";
 import { HrJobsPanel } from "@/components/hr/hr-jobs-panel";
 import { HrApplicantsPanel } from "@/components/hr/hr-applicants-panel";
+import { NotificationBell } from "@/components/notifications/notification-bell";
 
 export function HrWorkspaceView() {
   const { clearSession, logout, status, token, user } = useAuth();
@@ -75,13 +76,16 @@ export function HrWorkspaceView() {
               Your company workspace is ready. Job posting and candidate management come next.
             </p>
           </div>
-          <button
-            className="inline-flex h-11 items-center justify-center rounded-full border border-[#d8d5c8] bg-white px-5 text-sm font-semibold text-[#20332a] transition hover:border-[#b7b29f] hover:bg-[#fbfaf4] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#a6f20f]"
-            onClick={handleLogout}
-            type="button"
-          >
-            Logout
-          </button>
+          <div className="flex items-center gap-2">
+            <NotificationBell />
+            <button
+              className="inline-flex h-11 items-center justify-center rounded-full border border-[#d8d5c8] bg-white px-5 text-sm font-semibold text-[#20332a] transition hover:border-[#b7b29f] hover:bg-[#fbfaf4] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#a6f20f]"
+              onClick={handleLogout}
+              type="button"
+            >
+              Logout
+            </button>
+          </div>
         </header>
 
         <section className="mt-8 rounded-[24px] border border-[#e1ded1] bg-white px-6 py-5 shadow-sm">

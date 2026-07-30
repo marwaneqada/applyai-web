@@ -39,6 +39,17 @@ export type Company = {
   created_at: string | null;
 };
 
+export type AppNotification = {
+  id: number;
+  type: string;
+  title: string;
+  message: string;
+  payload: Record<string, unknown>;
+  target_url: string | null;
+  read_at: string | null;
+  created_at: string | null;
+};
+
 export type JobStatus = "draft" | "open" | "closed";
 export type JobApplicationState = "applied" | "not_applied";
 export type PostedWithinDays = 1 | 3 | 7 | 14 | 30;
@@ -650,6 +661,40 @@ export function logoutRequest(token: string) {
     method: "POST",
     token,
   });
+}
+
+export async function listNotifications(token: string, page = 1, perPage = 20) {
+  return apiRequest<PaginatedResponse<AppNotification>>(
+    `/api/notifications?page=${page}&per_page=${perPage}`,
+    { method: "GET", token },
+  );
+}
+
+export async function getUnreadNotificationCount(token: string) {
+  const response = await apiRequest<{ data: { count: number } }>(
+    "/api/notifications/unread-count",
+    { method: "GET", token },
+  );
+
+  return response.data.count;
+}
+
+export async function markNotificationRead(token: string, id: number) {
+  const response = await apiRequest<ResourceResponse<AppNotification>>(
+    `/api/notifications/${id}/read`,
+    { method: "PATCH", token },
+  );
+
+  return response.data;
+}
+
+export async function markAllNotificationsRead(token: string) {
+  const response = await apiRequest<{ data: { updated: number } }>(
+    "/api/notifications/read-all",
+    { method: "PATCH", token },
+  );
+
+  return response.data.updated;
 }
 
 export async function getCandidateProfile(token: string) {

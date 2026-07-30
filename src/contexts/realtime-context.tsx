@@ -12,10 +12,12 @@ import { useAuth } from "@/contexts/auth-context";
 import {
   ANALYSIS_STATUS_EVENT,
   APPLICATION_STATUS_EVENT,
+  NOTIFICATION_CREATED_EVENT,
   createRealtimeClient,
   type AnalysisStatusEvent,
   type ApplicationStatusEvent,
   type JobSubmissionUpdatedEvent,
+  type NotificationCreatedEvent,
   type RealtimeClient,
 } from "@/lib/realtime";
 
@@ -75,6 +77,10 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
         message: `${payload.job_title} moved to ${titleCase(payload.status)}.`,
         tone: payload.status === "rejected" ? "error" : "info",
       });
+    });
+
+    channel.listen(".notification.created", (payload: NotificationCreatedEvent) => {
+      window.dispatchEvent(new CustomEvent(NOTIFICATION_CREATED_EVENT, { detail: payload }));
     });
 
     Promise.resolve().then(() => setClient(echo));

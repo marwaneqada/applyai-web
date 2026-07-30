@@ -5,6 +5,7 @@ import Pusher from "pusher-js";
 
 export const ANALYSIS_STATUS_EVENT = "applyai:analysis-status";
 export const APPLICATION_STATUS_EVENT = "applyai:application-status";
+export const NOTIFICATION_CREATED_EVENT = "applyai:notification-created";
 
 export type AnalysisStatusEvent = {
   analysis_id: number;
@@ -32,6 +33,17 @@ export type JobSubmissionUpdatedEvent = {
   status: "new" | "screening" | "interview" | "offer" | "hired" | "rejected";
   match_status: "pending" | "processing" | "completed" | "failed" | null;
   overall_score: number | null;
+};
+
+export type NotificationCreatedEvent = {
+  id: number;
+  type: string;
+  title: string;
+  message: string;
+  payload: Record<string, unknown>;
+  target_url: string | null;
+  read_at: string | null;
+  created_at: string | null;
 };
 
 export type RealtimeClient = Echo<"reverb">;

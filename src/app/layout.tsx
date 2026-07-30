@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { AuthProvider } from "@/contexts/auth-context";
 import { RealtimeProvider } from "@/contexts/realtime-context";
+import { NotificationsProvider } from "@/contexts/notifications-context";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -35,7 +36,9 @@ export default function RootLayout({
     >
       <body className="min-h-full bg-[#fbfaf4] font-sans text-[#062b1f]">
         <AuthProvider>
-          <RealtimeProvider>{children}</RealtimeProvider>
+          <RealtimeProvider>
+            <NotificationsProvider>{children}</NotificationsProvider>
+          </RealtimeProvider>
         </AuthProvider>
       </body>
     </html>

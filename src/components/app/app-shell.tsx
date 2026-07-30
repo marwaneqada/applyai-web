@@ -7,6 +7,7 @@ import { useAuth } from "@/contexts/auth-context";
 import { ApplyAiLogo } from "@/components/auth/applyai-logo";
 import { useTour } from "@/components/app/tour/tour-context";
 import { accountHomePath } from "@/lib/routing";
+import { NotificationBell } from "@/components/notifications/notification-bell";
 
 const navItems = [
   { href: "/app", label: "Workspace" },
@@ -108,6 +109,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             })}
           </nav>
           <div className="relative flex items-center gap-1" ref={accountMenuRef}>
+            <NotificationBell />
             <Link
               className="hidden max-w-36 truncate rounded-full px-2 py-2 text-sm font-semibold text-[#20332a] transition hover:bg-[#eff3df] hover:text-[#062b1f] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#a6f20f] sm:block"
               href="/app/profile"
