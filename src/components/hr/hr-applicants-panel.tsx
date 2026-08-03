@@ -218,7 +218,6 @@ export function HrApplicantsPanel({
   const [page, setPage] = useState(1);
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [statusValue, setStatusValue] = useState<JobSubmissionStatus>("new");
-  const [notes, setNotes] = useState("");
   const [candidateMessage, setCandidateMessage] = useState("");
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
@@ -263,7 +262,6 @@ export function HrApplicantsPanel({
       selectedIdRef.current = nextSelected?.id ?? null;
       setSelectedId(nextSelected?.id ?? null);
       setStatusValue(nextSelected?.status ?? "new");
-      setNotes(nextSelected?.notes ?? "");
     } catch (cause) {
       if (isUnauthorizedError(cause)) {
         clearSession();
@@ -331,7 +329,6 @@ export function HrApplicantsPanel({
 
     try {
       const updated = await updateHrSubmission(token, selected.id, {
-        notes: notes.trim() || null,
         status: statusValue,
         candidate_message: candidateMessage.trim() || null,
       });
@@ -422,7 +419,7 @@ export function HrApplicantsPanel({
         <div>
           <h2 className="text-xl font-semibold">Applicants</h2>
           <p className="mt-2 text-sm leading-6 text-[#657167]">
-            Review every application, keep private notes, and move candidates through your hiring process.
+            Review every application and move candidates through your hiring process.
           </p>
         </div>
         <p className="text-sm font-semibold text-[#405047]">
@@ -554,7 +551,6 @@ export function HrApplicantsPanel({
                     selectedIdRef.current = submission.id;
                     setSelectedId(submission.id);
                     setStatusValue(submission.status);
-                    setNotes(submission.notes ?? "");
                     setCandidateMessage("");
                     setSuccess("");
                   }}
@@ -777,43 +773,6 @@ export function HrApplicantsPanel({
                   </section>
                 ) : null}
 
-                <section>
-                  <label className="text-sm font-semibold" htmlFor="applicant-notes">
-                    Private HR notes
-                  </label>
-                  <textarea
-                    className="mt-3 min-h-28 w-full rounded-xl border border-[#d8d5c8] bg-[#fbfaf4] p-3 text-sm leading-6 outline-none transition placeholder:text-[#657167] focus:border-[#588100] focus:bg-white focus:ring-4 focus:ring-[#a6f20f]/20"
-                    id="applicant-notes"
-                    maxLength={5000}
-                    onChange={(event) => setNotes(event.target.value)}
-                    placeholder="Add interview feedback, follow-up reminders, or internal context..."
-                    value={notes}
-                  />
-                  <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
-                    <p className="text-xs font-medium text-[#657167]">
-                      Only members of your company can see these notes.
-                    </p>
-                    <button
-                      className="h-10 rounded-full bg-[#062b1f] px-5 text-sm font-semibold text-white transition hover:bg-[#031a13] disabled:cursor-not-allowed disabled:opacity-50"
-                      disabled={
-                        saving ||
-                        (statusValue === selected.status &&
-                          notes.trim() === (selected.notes ?? "") &&
-                          !candidateMessage.trim())
-                      }
-                      onClick={() => void saveReview()}
-                      type="button"
-                    >
-                      {saving ? "Saving..." : "Save review"}
-                    </button>
-                  </div>
-                  {success ? (
-                    <p className="mt-3 text-sm font-semibold text-[#3f5e00]" role="status">
-                      {success}
-                    </p>
-                  ) : null}
-                </section>
-
                 <section className="border-t border-[#e8e4d8] pt-6">
                   <label className="text-sm font-semibold" htmlFor="candidate-message">
                     Message candidate
@@ -837,6 +796,24 @@ export function HrApplicantsPanel({
                       This applicant is external and does not have an ApplyAI account for in-app messages.
                     </p>
                   )}
+                  <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
+                    <button
+                      className="h-10 rounded-full bg-[#062b1f] px-5 text-sm font-semibold text-white transition hover:bg-[#031a13] disabled:cursor-not-allowed disabled:opacity-50"
+                      disabled={
+                        saving ||
+                        (statusValue === selected.status && !candidateMessage.trim())
+                      }
+                      onClick={() => void saveReview()}
+                      type="button"
+                    >
+                      {saving ? "Saving..." : "Save review"}
+                    </button>
+                    {success ? (
+                      <p className="text-sm font-semibold text-[#3f5e00]" role="status">
+                        {success}
+                      </p>
+                    ) : null}
+                  </div>
                 </section>
               </div>
             </>
