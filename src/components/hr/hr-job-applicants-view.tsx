@@ -11,11 +11,47 @@ import {
 } from "@/lib/api";
 import { useAuth } from "@/contexts/auth-context";
 import { HrApplicantsPanel } from "@/components/hr/hr-applicants-panel";
+import { ApplyAiLogo } from "@/components/auth/applyai-logo";
+import { NotificationBell } from "@/components/notifications/notification-bell";
+
+function HrJobHeader({ onLogout }: { onLogout: () => void }) {
+  return (
+    <header className="sticky top-0 z-20 -mx-5 border-b border-[#e8e4d8]/90 bg-[#fbfaf4]/95 px-5 py-4 backdrop-blur sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8">
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <div className="flex items-center gap-6">
+          <ApplyAiLogo />
+          <div className="hidden h-8 w-px bg-[#d8d5c8] sm:block" />
+          <div className="hidden sm:block">
+            <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[#588100]">HR workspace</p>
+            <p className="mt-1 text-sm font-semibold text-[#20332a]">Applicants</p>
+          </div>
+        </div>
+        <nav className="order-3 flex w-full gap-1 sm:order-none sm:w-auto" aria-label="HR workspace">
+          <Link className="rounded-full px-4 py-2 text-sm font-semibold text-[#405047] transition hover:bg-[#eff3df] hover:text-[#062b1f]" href="/hr">
+            Job posts
+          </Link>
+          <Link className="rounded-full bg-[#062b1f] px-4 py-2 text-sm font-semibold text-[#f7f5ec]" href="/hr?section=applicants">
+            Applicants
+          </Link>
+          <Link className="rounded-full px-4 py-2 text-sm font-semibold text-[#405047] transition hover:bg-[#eff3df] hover:text-[#062b1f]" href="/hr?section=profile">
+            Profile
+          </Link>
+        </nav>
+        <div className="flex items-center gap-2">
+          <NotificationBell />
+          <button className="h-10 rounded-full border border-[#d8d5c8] bg-white px-4 text-sm font-semibold transition hover:border-[#a9c878]" onClick={onLogout} type="button">
+            Logout
+          </button>
+        </div>
+      </div>
+    </header>
+  );
+}
 
 export function HrJobApplicantsView() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
-  const { clearSession, status, token, user } = useAuth();
+  const { clearSession, logout, status, token, user } = useAuth();
   const [job, setJob] = useState<HrJob | null>(null);
   const [error, setError] = useState("");
 
@@ -52,10 +88,20 @@ export function HrJobApplicantsView() {
     void Promise.resolve().then(load);
   }, [load]);
 
+  async function handleLogout() {
+    await logout();
+    router.replace("/login");
+  }
+
   if (status !== "authenticated" || user?.account_type !== "hr") {
     return (
-      <main className="grid min-h-screen place-items-center bg-[#fbfaf4]">
-        <p className="text-sm font-medium text-[#657167]">Loading job workspace...</p>
+      <main className="min-h-screen bg-[#fbfaf4] px-5 text-[#062b1f] sm:px-6 lg:px-8">
+        <div className="mx-auto w-full max-w-7xl">
+          <HrJobHeader onLogout={() => void handleLogout()} />
+          <div className="grid min-h-[50vh] place-items-center">
+            <p className="text-sm font-medium text-[#657167]">Loading job workspace...</p>
+          </div>
+        </div>
       </main>
     );
   }
@@ -63,6 +109,7 @@ export function HrJobApplicantsView() {
   return (
     <main className="min-h-screen bg-[#fbfaf4] px-5 py-8 text-[#062b1f] sm:px-6 lg:px-8">
       <div className="mx-auto w-full max-w-7xl">
+        <HrJobHeader onLogout={() => void handleLogout()} />
         <Link className="text-sm font-semibold text-[#405047] hover:text-[#062b1f]" href="/hr">
           ← HR workspace
         </Link>

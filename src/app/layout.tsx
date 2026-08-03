@@ -16,7 +16,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "ApplyAI | Resume Tailoring and Application Tracker",
+  title: "ApplyAI | Resume Tailoring and Job Applications",
   description:
     "ApplyAI helps applicants upload a resume, analyze the job match, rewrite bullets, generate a cover letter, export a PDF, and track applications.",
   icons: {

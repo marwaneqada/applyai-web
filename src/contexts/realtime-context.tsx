@@ -11,10 +11,12 @@ import {
 import { useAuth } from "@/contexts/auth-context";
 import {
   ANALYSIS_STATUS_EVENT,
+  APPLICATION_MATCH_EVENT,
   APPLICATION_STATUS_EVENT,
   NOTIFICATION_CREATED_EVENT,
   createRealtimeClient,
   type AnalysisStatusEvent,
+  type ApplicationMatchEvent,
   type ApplicationStatusEvent,
   type JobSubmissionUpdatedEvent,
   type NotificationCreatedEvent,
@@ -43,51 +45,71 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
       return;
     }
 
-    const echo = createRealtimeClient(token);
+    let active = true;
+    let echo: RealtimeClient | null = null;
 
-    if (!echo) {
-      return;
-    }
-
-    const channelName = `users.${user.id}`;
-    const channel = echo.private(channelName);
-
-    channel.listen(".analysis.status.updated", (payload: AnalysisStatusEvent) => {
-      window.dispatchEvent(new CustomEvent(ANALYSIS_STATUS_EVENT, { detail: payload }));
-
-      if (payload.status === "completed") {
-        setToast({
-          id: Date.now(),
-          message: "Your resume analysis is ready.",
-          tone: "success",
-        });
-      } else if (payload.status === "failed") {
-        setToast({
-          id: Date.now(),
-          message: "Your resume analysis could not be completed.",
-          tone: "error",
-        });
+    void createRealtimeClient(token).then((nextEcho) => {
+      if (!active || !nextEcho) {
+        nextEcho?.disconnect();
+        return;
       }
-    });
 
-    channel.listen(".application.status.updated", (payload: ApplicationStatusEvent) => {
-      window.dispatchEvent(new CustomEvent(APPLICATION_STATUS_EVENT, { detail: payload }));
-      setToast({
-        id: Date.now(),
-        message: `${payload.job_title} moved to ${titleCase(payload.status)}.`,
-        tone: payload.status === "rejected" ? "error" : "info",
+      echo = nextEcho;
+      const channelName = `users.${user.id}`;
+      const channel = echo.private(channelName);
+
+      channel.listen(".analysis.status.updated", (payload: AnalysisStatusEvent) => {
+        window.dispatchEvent(new CustomEvent(ANALYSIS_STATUS_EVENT, { detail: payload }));
+
+        if (payload.status === "completed") {
+          setToast({ id: Date.now(), message: "Your resume analysis is ready.", tone: "success" });
+        } else if (payload.status === "failed") {
+          setToast({ id: Date.now(), message: "Your resume analysis could not be completed.", tone: "error" });
+        }
       });
-    });
 
-    channel.listen(".notification.created", (payload: NotificationCreatedEvent) => {
-      window.dispatchEvent(new CustomEvent(NOTIFICATION_CREATED_EVENT, { detail: payload }));
-    });
+      channel.listen(".application.status.updated", (payload: ApplicationStatusEvent) => {
+        window.dispatchEvent(new CustomEvent(APPLICATION_STATUS_EVENT, { detail: payload }));
+        setToast({
+          id: Date.now(),
+          message: `${payload.job_title} moved to ${titleCase(payload.status)}.`,
+          tone: payload.status === "rejected" ? "error" : "info",
+        });
+      });
 
-    Promise.resolve().then(() => setClient(echo));
+      channel.listen(".application.match.updated", (payload: ApplicationMatchEvent) => {
+        window.dispatchEvent(new CustomEvent(APPLICATION_MATCH_EVENT, { detail: payload }));
+      });
+
+      channel.listen(".notification.created", (payload: NotificationCreatedEvent) => {
+        window.dispatchEvent(new CustomEvent(NOTIFICATION_CREATED_EVENT, { detail: payload }));
+
+        if (
+          payload.type === "application.status_changed" &&
+          typeof payload.payload.application_id === "number" &&
+          typeof payload.payload.job_submission_id === "number" &&
+          typeof payload.payload.status === "string"
+        ) {
+          window.dispatchEvent(new CustomEvent(APPLICATION_STATUS_EVENT, {
+            detail: {
+              application_id: payload.payload.application_id,
+              job_submission_id: payload.payload.job_submission_id,
+              status: payload.payload.status as ApplicationStatusEvent["status"],
+              job_title: typeof payload.payload.job_title === "string" ? payload.payload.job_title : "Application",
+            } satisfies ApplicationStatusEvent,
+          }));
+        }
+
+        setToast({ id: Date.now(), message: payload.title, tone: "info" });
+      });
+
+      setClient(echo);
+    });
 
     return () => {
-      echo.leave(channelName);
-      echo.disconnect();
+      active = false;
+      echo?.leave(`users.${user.id}`);
+      echo?.disconnect();
       setClient(null);
     };
   }, [status, token, user]);

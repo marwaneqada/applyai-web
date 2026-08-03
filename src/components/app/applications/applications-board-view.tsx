@@ -6,8 +6,10 @@ import {
   useCallback,
   useEffect,
   useState,
+  useRef,
   type DragEvent,
 } from "react";
+import { useSearchParams } from "next/navigation";
 import { createPortal } from "react-dom";
 import {
   ApiError,
@@ -22,10 +24,13 @@ import { useAuth } from "@/contexts/auth-context";
 import { useRealtimeEvent } from "@/contexts/realtime-context";
 import {
   APPLICATION_STATUS_EVENT,
+  APPLICATION_MATCH_EVENT,
   type ApplicationStatusEvent,
+  type ApplicationMatchEvent,
 } from "@/lib/realtime";
 import { useTour } from "@/components/app/tour/tour-context";
 import { ApplicationFormModal } from "./application-form-modal";
+import { ApplicationDetailsModal } from "./application-details-modal";
 import {
   EditIcon,
   KebabIcon,
@@ -34,13 +39,17 @@ import {
   TrashIcon,
   formatDate,
   motionEase,
+  originMeta,
   statusMeta,
+  matchScoreClass,
 } from "./applications-shared";
 
 type LoadStatus = "loading" | "ready" | "error";
+type ApplicationFilter = "all" | "applyai" | "external";
 type ModalState =
   | { mode: "create" }
   | { mode: "edit"; application: Application }
+  | { mode: "view"; application: Application }
   | null;
 type MenuState = { id: number; top: number; left: number; maxHeight: number };
 type DragOver = { status: ApplicationStatus; index: number };
@@ -127,6 +136,8 @@ function StatTile({ label, value }: { label: string; value: number }) {
 
 export function ApplicationsBoardView() {
   const { token } = useAuth();
+  const searchParams = useSearchParams();
+  const requestedApplicationId = Number(searchParams.get("application_id"));
   const { completeAction } = useTour();
   const shouldReduceMotion = useReducedMotion();
   const reduceMotion = shouldReduceMotion === true;
@@ -140,6 +151,8 @@ export function ApplicationsBoardView() {
   const [confirmDeleteId, setConfirmDeleteId] = useState<number | null>(null);
   const [draggingId, setDraggingId] = useState<number | null>(null);
   const [dragOver, setDragOver] = useState<DragOver | null>(null);
+  const [applicationFilter, setApplicationFilter] = useState<ApplicationFilter>("all");
+  const openedNotificationIdRef = useRef<number | null>(null);
 
   const load = useCallback(async () => {
     if (!token) {
@@ -168,6 +181,26 @@ export function ApplicationsBoardView() {
   useRealtimeEvent<ApplicationStatusEvent>(APPLICATION_STATUS_EVENT, () => {
     void load();
   });
+  useRealtimeEvent<ApplicationMatchEvent>(APPLICATION_MATCH_EVENT, () => {
+    void load();
+  });
+
+  useEffect(() => {
+    if (!board || !Number.isInteger(requestedApplicationId) || requestedApplicationId <= 0) {
+      return;
+    }
+
+    const application = findApp(board, requestedApplicationId);
+
+    if (
+      application &&
+      modal === null &&
+      openedNotificationIdRef.current !== requestedApplicationId
+    ) {
+      openedNotificationIdRef.current = requestedApplicationId;
+      setModal({ mode: "view", application });
+    }
+  }, [board, modal, requestedApplicationId]);
 
   function closeMenu() {
     setMenu(null);
@@ -332,6 +365,17 @@ export function ApplicationsBoardView() {
     : 0;
   const active = board ? total - board.rejected.length : 0;
   const menuApplication = menu && board ? findApp(board, menu.id) : undefined;
+  const filterMeta: Record<ApplicationFilter, { label: string; count: number }> = {
+    all: { label: "All applications", count: total },
+    applyai: {
+      label: "ApplyAI applications",
+      count: board ? STATUS_ORDER.flatMap((status) => board[status]).filter((application) => application.origin === "applyai").length : 0,
+    },
+    external: {
+      label: "Tracked externally",
+      count: board ? STATUS_ORDER.flatMap((status) => board[status]).filter((application) => application.origin === "external").length : 0,
+    },
+  };
 
   return (
     <main className="mx-auto w-full max-w-7xl px-5 py-10 sm:px-6 lg:px-8">
@@ -413,10 +457,27 @@ export function ApplicationsBoardView() {
       ) : null}
 
       {loadStatus === "ready" && board ? (
+        <div className="mt-6 flex flex-wrap gap-2 rounded-2xl border border-[#e1ded1] bg-white p-2" role="tablist" aria-label="Application origin">
+          {(Object.keys(filterMeta) as ApplicationFilter[]).map((filter) => (
+            <button
+              aria-selected={applicationFilter === filter}
+              className={`rounded-xl px-3.5 py-2 text-sm font-semibold transition ${applicationFilter === filter ? "bg-[#062b1f] text-[#f7f5ec]" : "text-[#657167] hover:bg-[#f4f2ea] hover:text-[#062b1f]"}`}
+              key={filter}
+              onClick={() => setApplicationFilter(filter)}
+              role="tab"
+              type="button"
+            >
+              {filterMeta[filter].label} <span className="ml-1 opacity-70">{filterMeta[filter].count}</span>
+            </button>
+          ))}
+        </div>
+      ) : null}
+
+      {loadStatus === "ready" && board ? (
         <div className="mt-6 flex gap-4 overflow-x-auto pb-4">
           {STATUS_ORDER.map((status) => {
             const meta = statusMeta[status];
-            const cards = board[status];
+            const cards = board[status].filter((application) => applicationFilter === "all" || application.origin === applicationFilter);
             const isDropTarget = dragOver?.status === status;
 
             return (
@@ -465,6 +526,15 @@ export function ApplicationsBoardView() {
                           }`}
                           data-card-id={application.id}
                           draggable
+                          onClick={(event) => {
+                            const target = event.target as HTMLElement;
+
+                            if (target.closest("button, a")) {
+                              return;
+                            }
+
+                            setModal({ mode: "view", application });
+                          }}
                           onDragEnd={() => {
                             setDraggingId(null);
                             setDragOver(null);
@@ -482,6 +552,14 @@ export function ApplicationsBoardView() {
                               // Some browsers disallow setData; drag still works.
                             }
                           }}
+                          onKeyDown={(event) => {
+                            if (event.key === "Enter" || event.key === " ") {
+                              event.preventDefault();
+                              setModal({ mode: "view", application });
+                            }
+                          }}
+                          role="button"
+                          tabIndex={0}
                         >
                           <div className="flex items-start justify-between gap-2">
                             <div className="min-w-0">
@@ -501,6 +579,19 @@ export function ApplicationsBoardView() {
                               <KebabIcon />
                             </button>
                           </div>
+
+                          {application.origin === "applyai" && application.match?.status === "completed" && typeof application.match.overall_score === "number" ? (
+                            <div className="mt-3 flex items-center justify-between gap-2">
+                              <span className="text-[11px] font-medium text-[#657167]">Resume match</span>
+                              <span className={`inline-flex items-baseline gap-0.5 rounded-full border px-2 py-0.5 text-[11px] font-semibold ${matchScoreClass(application.match.overall_score)}`}>
+                                <span>{Math.round(application.match.overall_score)}</span><span className="opacity-70">/100</span>
+                              </span>
+                            </div>
+                          ) : null}
+
+                          <span className={`mt-2 inline-flex w-fit rounded-full border px-2 py-0.5 text-[10px] font-semibold ${originMeta[application.origin].chipClassName}`}>
+                            {application.origin === "applyai" ? "ApplyAI application" : "Tracked externally"}
+                          </span>
 
                           {application.applied_date || application.contact_name ? (
                             <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
@@ -637,7 +728,13 @@ export function ApplicationsBoardView() {
           )
         : null}
 
-      {modal && token ? (
+      {modal?.mode === "view" ? (
+        <ApplicationDetailsModal
+          application={modal.application}
+          onClose={() => setModal(null)}
+          onEdit={() => setModal({ mode: "edit", application: modal.application })}
+        />
+      ) : modal && token ? (
         <ApplicationFormModal
           initial={modal.mode === "edit" ? modal.application : undefined}
           mode={modal.mode}

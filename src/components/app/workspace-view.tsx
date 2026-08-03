@@ -16,9 +16,11 @@ import { useAuth } from "@/contexts/auth-context";
 import { useRealtimeEvent } from "@/contexts/realtime-context";
 import {
   ANALYSIS_STATUS_EVENT,
+  APPLICATION_MATCH_EVENT,
   APPLICATION_STATUS_EVENT,
   type AnalysisStatusEvent,
   type ApplicationStatusEvent,
+  type ApplicationMatchEvent,
 } from "@/lib/realtime";
 import { useTour } from "@/components/app/tour/tour-context";
 import {
@@ -28,6 +30,7 @@ import {
 } from "@/components/app/analyses/analysis-shared";
 import {
   STATUS_ORDER,
+  matchScoreClass,
   statusMeta,
 } from "@/components/app/applications/applications-shared";
 
@@ -207,15 +210,28 @@ export function WorkspaceView() {
   useRealtimeEvent<ApplicationStatusEvent>(APPLICATION_STATUS_EVENT, () => {
     void load();
   });
+  useRealtimeEvent<ApplicationMatchEvent>(APPLICATION_MATCH_EVENT, () => {
+    void load();
+  });
 
   useEffect(() => {
     void Promise.resolve().then(load);
   }, [load]);
 
-  const applicationTotal = board
-    ? STATUS_ORDER.reduce((sum, key) => sum + board[key].length, 0)
-    : 0;
+  const applyAiApplications = board
+    ? STATUS_ORDER
+        .flatMap((key) => board[key])
+        .filter((application) => application.origin === "applyai")
+    : [];
+  const applicationTotal = applyAiApplications.length;
   const recentAnalyses = analyses.slice(0, 4);
+  const recentApplications = applyAiApplications
+        .sort((a, b) => {
+          const aTime = a.updated_at ? new Date(a.updated_at).getTime() : 0;
+          const bTime = b.updated_at ? new Date(b.updated_at).getTime() : 0;
+          return bTime - aTime;
+        })
+        .slice(0, 4);
   const isEmpty =
     status === "ready" &&
     resumes.length === 0 &&
@@ -339,10 +355,10 @@ export function WorkspaceView() {
                 title: "Analyze a role",
               },
               {
-                body: "Track each role from saved to offer on your board.",
-                cta: "Open tracker",
-                href: "/app/applications",
-                title: "Track applications",
+                body: "Apply through ApplyAI and follow hiring-team updates automatically.",
+                cta: "Browse jobs",
+                href: "/app/jobs",
+                title: "Apply to a job",
               },
             ].map((step, index) => (
               <li
@@ -385,7 +401,7 @@ export function WorkspaceView() {
             <StatTile
               href="/app/applications"
               label="Offers"
-              value={board.offer.length}
+              value={board.offer.filter((application) => application.origin === "applyai").length}
             />
           </div>
 
@@ -403,10 +419,10 @@ export function WorkspaceView() {
               title="Run an analysis"
             />
             <QuickAction
-              description="Track applications on your board."
+              description="Follow applications and hiring-team updates."
               href="/app/applications"
               icon={<BoardIcon />}
-              title="Open tracker"
+              title="View applications"
             />
           </div>
 
@@ -470,6 +486,49 @@ export function WorkspaceView() {
                   })}
                 </ul>
               )}
+
+              <div className="mt-6 border-t border-[#eee9db] pt-5">
+                <div className="flex items-center justify-between gap-3">
+                  <h3 className="text-sm font-semibold text-[#062b1f]">Recent ApplyAI applications</h3>
+                  <Link
+                    className="text-xs font-semibold text-[#588100] transition hover:text-[#3f5e00]"
+                    href="/app/applications"
+                  >
+                    View all
+                  </Link>
+                </div>
+                {recentApplications.length === 0 ? (
+                  <p className="mt-3 text-sm text-[#657167]">Applications submitted through ApplyAI will appear here.</p>
+                ) : (
+                  <ul className="mt-3 grid gap-2.5">
+                    {recentApplications.map((application) => {
+                      const score = application.match?.overall_score;
+                      const hasScore =
+                        application.match?.status === "completed" &&
+                        typeof score === "number";
+
+                      return (
+                      <li key={application.id}>
+                        <Link
+                          className="flex items-center justify-between gap-3 rounded-2xl border border-[#e8e4d8] bg-[#fbfaf4] px-4 py-3 transition hover:border-[#cfcbbb] hover:bg-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#a6f20f]"
+                          href={`/app/applications?application_id=${application.id}`}
+                        >
+                          <div className="min-w-0">
+                            <p className="truncate text-sm font-semibold text-[#062b1f]">{application.job_title}</p>
+                            <p className="mt-0.5 truncate text-xs text-[#657167]">{application.company_name}</p>
+                          </div>
+                          {hasScore ? (
+                            <span className={`inline-flex shrink-0 items-baseline gap-0.5 rounded-full border px-3 py-1 text-xs font-semibold ${matchScoreClass(score)}`}>
+                              <span className="text-sm">{Math.round(score)}</span><span className="opacity-70">/100</span>
+                            </span>
+                          ) : null}
+                        </Link>
+                      </li>
+                      );
+                    })}
+                  </ul>
+                )}
+              </div>
             </Panel>
 
             <Panel>
@@ -479,7 +538,7 @@ export function WorkspaceView() {
                   className="text-sm font-semibold text-[#588100] transition hover:text-[#3f5e00]"
                   href="/app/applications"
                 >
-                  Board
+                  View all
                 </Link>
               </div>
               <ul className="mt-4 grid gap-2">
@@ -495,7 +554,7 @@ export function WorkspaceView() {
                       {statusMeta[key].label}
                     </span>
                     <span className="text-sm font-semibold text-[#062b1f]">
-                      {board[key].length}
+                      {board[key].filter((application) => application.origin === "applyai").length}
                     </span>
                   </li>
                 ))}

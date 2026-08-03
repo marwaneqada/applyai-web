@@ -5,6 +5,7 @@ import Pusher from "pusher-js";
 
 export const ANALYSIS_STATUS_EVENT = "applyai:analysis-status";
 export const APPLICATION_STATUS_EVENT = "applyai:application-status";
+export const APPLICATION_MATCH_EVENT = "applyai:application-match";
 export const NOTIFICATION_CREATED_EVENT = "applyai:notification-created";
 
 export type AnalysisStatusEvent = {
@@ -25,6 +26,13 @@ export type ApplicationStatusEvent = {
     | "hired"
     | "rejected";
   job_title: string;
+};
+
+export type ApplicationMatchEvent = {
+  application_id: number;
+  job_submission_id: number;
+  match_status: "pending" | "processing" | "completed" | "failed";
+  overall_score: number | null;
 };
 
 export type JobSubmissionUpdatedEvent = {
@@ -53,8 +61,21 @@ function apiOrigin() {
     .replace(/\/+$/, "");
 }
 
-export function createRealtimeClient(token: string): RealtimeClient | null {
-  const key = process.env.NEXT_PUBLIC_REVERB_APP_KEY;
+export async function createRealtimeClient(token: string): Promise<RealtimeClient | null> {
+  let key = process.env.NEXT_PUBLIC_REVERB_APP_KEY;
+
+  try {
+    const response = await fetch(`${apiOrigin()}/api/realtime/config`, {
+      headers: { Accept: "application/json" },
+    });
+
+    if (response.ok) {
+      const payload = (await response.json()) as { data?: { key?: string | null } };
+      key = payload.data?.key ?? key;
+    }
+  } catch {
+    // Use the local public fallback when the API config endpoint is unavailable.
+  }
 
   if (!key) {
     return null;

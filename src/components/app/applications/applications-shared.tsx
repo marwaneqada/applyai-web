@@ -1,4 +1,4 @@
-import type { ApplicationStatus } from "@/lib/api";
+import type { ApplicationOrigin, ApplicationStatus } from "@/lib/api";
 
 export const motionEase = [0.22, 1, 0.36, 1] as const;
 
@@ -70,6 +70,34 @@ export function formatDate(iso: string | null) {
     year: "numeric",
   }).format(date);
 }
+
+export function matchScoreClass(score: number) {
+  if (score >= 75) {
+    return "border-[#cfe3aa] bg-[#eaf8c9] text-[#315000]";
+  }
+
+  if (score >= 50) {
+    return "border-[#ecdcae] bg-[#fbf3da] text-[#7a5a12]";
+  }
+
+  return "border-[#efc8bf] bg-[#fff7f4] text-[#8b281f]";
+}
+
+export const originMeta: Record<
+  ApplicationOrigin,
+  { label: string; description: string; chipClassName: string }
+> = {
+  applyai: {
+    label: "ApplyAI application",
+    description: "Applied through an ApplyAI job posting.",
+    chipClassName: "border-[#cfe3f0] bg-[#eef6fb] text-[#215273]",
+  },
+  external: {
+    label: "Tracked externally",
+    description: "Added manually for an application made elsewhere.",
+    chipClassName: "border-[#e1ded1] bg-[#f4f2ea] text-[#4a5850]",
+  },
+};
 
 export function PlusIcon() {
   return (

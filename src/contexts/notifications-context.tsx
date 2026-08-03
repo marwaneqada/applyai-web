@@ -39,14 +39,17 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
   const [unreadCount, setUnreadCount] = useState(0);
   const [loading, setLoading] = useState(false);
 
-  const load = useCallback(async () => {
+  const sync = useCallback(async (showLoading: boolean) => {
     if (status !== "authenticated" || !token) {
       setNotifications([]);
       setUnreadCount(0);
       return;
     }
 
-    setLoading(true);
+    if (showLoading) {
+      setLoading(true);
+    }
+
     try {
       const [list, count] = await Promise.all([
         listNotifications(token),
@@ -54,14 +57,42 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
       ]);
       setNotifications(list.data);
       setUnreadCount(count);
+    } catch {
+      // Keep the last known state. Reverb or the next REST recovery pass can resync it.
     } finally {
-      setLoading(false);
+      if (showLoading) {
+        setLoading(false);
+      }
     }
   }, [status, token]);
 
   useEffect(() => {
-    void Promise.resolve().then(load);
-  }, [load]);
+    void Promise.resolve().then(() => sync(true));
+  }, [sync]);
+
+  useEffect(() => {
+    if (status !== "authenticated" || !token) {
+      return;
+    }
+
+    const recover = () => {
+      if (document.visibilityState === "visible") {
+        void sync(false);
+      }
+    };
+    const interval = window.setInterval(recover, 10_000);
+
+    window.addEventListener("focus", recover);
+    window.addEventListener("online", recover);
+    document.addEventListener("visibilitychange", recover);
+
+    return () => {
+      window.clearInterval(interval);
+      window.removeEventListener("focus", recover);
+      window.removeEventListener("online", recover);
+      document.removeEventListener("visibilitychange", recover);
+    };
+  }, [status, sync, token]);
 
   useEffect(() => {
     const handleCreated = (event: Event) => {

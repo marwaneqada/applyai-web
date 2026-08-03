@@ -197,12 +197,14 @@ function FilterMenu({
 export function HrApplicantsPanel({
   companyId,
   jobId,
+  submissionId,
 }: {
   companyId?: number;
   jobId?: number;
+  submissionId?: number;
 }) {
   const { clearSession, token } = useAuth();
-  const selectedIdRef = useRef<number | null>(null);
+  const selectedIdRef = useRef<number | null>(submissionId ?? null);
   const jobsRef = useRef<HrJobOption[]>([]);
   const [jobs, setJobs] = useState<HrJobOption[]>([]);
   const [submissions, setSubmissions] = useState<JobSubmission[]>([]);
@@ -217,6 +219,7 @@ export function HrApplicantsPanel({
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [statusValue, setStatusValue] = useState<JobSubmissionStatus>("new");
   const [notes, setNotes] = useState("");
+  const [candidateMessage, setCandidateMessage] = useState("");
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [loading, setLoading] = useState(true);
@@ -330,6 +333,7 @@ export function HrApplicantsPanel({
       const updated = await updateHrSubmission(token, selected.id, {
         notes: notes.trim() || null,
         status: statusValue,
+        candidate_message: candidateMessage.trim() || null,
       });
 
       if (filters.status && filters.status !== updated.status) {
@@ -342,6 +346,7 @@ export function HrApplicantsPanel({
         );
       }
       setSuccess("Applicant review saved.");
+      setCandidateMessage("");
     } catch (cause) {
       setError(
         cause instanceof ApiError
@@ -550,6 +555,7 @@ export function HrApplicantsPanel({
                     setSelectedId(submission.id);
                     setStatusValue(submission.status);
                     setNotes(submission.notes ?? "");
+                    setCandidateMessage("");
                     setSuccess("");
                   }}
                   type="button"
@@ -792,7 +798,8 @@ export function HrApplicantsPanel({
                       disabled={
                         saving ||
                         (statusValue === selected.status &&
-                          notes.trim() === (selected.notes ?? ""))
+                          notes.trim() === (selected.notes ?? "") &&
+                          !candidateMessage.trim())
                       }
                       onClick={() => void saveReview()}
                       type="button"
@@ -805,6 +812,31 @@ export function HrApplicantsPanel({
                       {success}
                     </p>
                   ) : null}
+                </section>
+
+                <section className="border-t border-[#e8e4d8] pt-6">
+                  <label className="text-sm font-semibold" htmlFor="candidate-message">
+                    Message candidate
+                  </label>
+                  {selected.candidate_user_id ? (
+                    <>
+                      <p className="mt-1 text-xs leading-5 text-[#657167]">
+                        Include an optional visible message with this review. The candidate receives one notification containing the new status and your message.
+                      </p>
+                      <textarea
+                        className="mt-3 min-h-24 w-full rounded-xl border border-[#d8d5c8] bg-[#fbfaf4] p-3 text-sm leading-6 outline-none transition placeholder:text-[#657167] focus:border-[#588100] focus:bg-white focus:ring-4 focus:ring-[#a6f20f]/20"
+                        id="candidate-message"
+                        maxLength={5000}
+                        onChange={(event) => setCandidateMessage(event.target.value)}
+                        placeholder="For example: We would like to invite you to an interview on..."
+                        value={candidateMessage}
+                      />
+                    </>
+                  ) : (
+                    <p className="mt-2 rounded-xl bg-[#f4f2ea] p-3 text-xs leading-5 text-[#657167]">
+                      This applicant is external and does not have an ApplyAI account for in-app messages.
+                    </p>
+                  )}
                 </section>
               </div>
             </>

@@ -39,6 +39,19 @@ export type Company = {
   created_at: string | null;
 };
 
+export type HrProfile = {
+  id: number;
+  name: string;
+  email: string;
+  company: {
+    id: number;
+    name: string;
+  };
+  membership_role: "owner" | "member";
+  can_manage_company: boolean;
+  joined_at: string | null;
+};
+
 export type AppNotification = {
   id: number;
   type: string;
@@ -169,6 +182,7 @@ export type JobSubmissionFilters = {
 export type UpdateJobSubmissionPayload = {
   status?: JobSubmissionStatus;
   notes?: string | null;
+  candidate_message?: string | null;
 };
 
 export type HrJobOption = {
@@ -304,11 +318,24 @@ export type ApplicationStatus =
   | "hired"
   | "rejected";
 
+export type ApplicationMatch = {
+  status: "pending" | "processing" | "completed" | "failed";
+  overall_score: number | null;
+  skills_score: number | null;
+  experience_score: number | null;
+  matched_requirements: string[] | null;
+  missing_requirements: string[] | null;
+  analyzed_at: string | null;
+};
+
+export type ApplicationOrigin = "applyai" | "external";
+
 export type Application = {
   id: number;
   analysis_id: number | null;
   job_post_id: number | null;
   job_submission_id: number | null;
+  origin: ApplicationOrigin;
   company_name: string;
   job_title: string;
   job_url: string | null;
@@ -320,6 +347,7 @@ export type Application = {
   position: number;
   created_at: string | null;
   updated_at: string | null;
+  match: ApplicationMatch | null;
 };
 
 export type ApplicationBoard = Record<ApplicationStatus, Application[]>;
@@ -614,6 +642,7 @@ export async function apiRequest<T>(
   const response = await fetch(`${API_BASE_URL}${path}`, {
     ...options,
     body: requestBody,
+    cache: options.method === undefined || options.method === "GET" ? "no-store" : options.cache,
     headers: requestHeaders,
   });
 
@@ -734,9 +763,45 @@ export async function getHrCompany(token: string) {
   return response.data;
 }
 
-export async function listHrJobs(token: string, page = 1, perPage = 10) {
+export async function getHrProfile(token: string) {
+  const response = await apiRequest<ResourceResponse<HrProfile>>("/api/hr/profile", {
+    method: "GET",
+    token,
+  });
+
+  return response.data;
+}
+
+export async function updateHrProfile(
+  token: string,
+  payload: { name: string; company_name?: string },
+) {
+  const response = await apiRequest<ResourceResponse<HrProfile>>("/api/hr/profile", {
+    method: "PATCH",
+    token,
+    body: payload,
+  });
+
+  return response.data;
+}
+
+export async function listHrJobs(
+  token: string,
+  page = 1,
+  perPage = 10,
+  status?: JobStatus,
+) {
+  const params = new URLSearchParams({
+    page: String(page),
+    per_page: String(perPage),
+  });
+
+  if (status) {
+    params.set("status", status);
+  }
+
   return apiRequest<PaginatedResponse<HrJob>>(
-    `/api/hr/jobs?page=${page}&per_page=${perPage}`,
+    `/api/hr/jobs?${params.toString()}`,
     { method: "GET", token },
   );
 }

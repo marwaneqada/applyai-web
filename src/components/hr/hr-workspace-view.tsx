@@ -1,18 +1,28 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { ApiError, getHrCompany, isUnauthorizedError, type Company } from "@/lib/api";
 import { useAuth } from "@/contexts/auth-context";
 import { HrJobsPanel } from "@/components/hr/hr-jobs-panel";
 import { HrApplicantsPanel } from "@/components/hr/hr-applicants-panel";
+import { HrProfilePanel } from "@/components/hr/hr-profile-panel";
 import { NotificationBell } from "@/components/notifications/notification-bell";
+import { ApplyAiLogo } from "@/components/auth/applyai-logo";
 
 export function HrWorkspaceView() {
   const { clearSession, logout, status, token, user } = useAuth();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const requestedSubmissionId = Number(searchParams.get("submission_id"));
   const [company, setCompany] = useState<Company | null>(null);
-  const [activeSection, setActiveSection] = useState<"jobs" | "applicants">("jobs");
+  const [activeSection, setActiveSection] = useState<"jobs" | "applicants" | "profile">(
+    searchParams.get("section") === "applicants"
+      ? "applicants"
+      : searchParams.get("section") === "profile"
+        ? "profile"
+        : "jobs",
+  );
   const [error, setError] = useState("");
 
   const load = useCallback(async () => {
@@ -52,9 +62,38 @@ export function HrWorkspaceView() {
     void Promise.resolve().then(load);
   }, [load]);
 
+  useEffect(() => {
+    void Promise.resolve().then(() => {
+      setActiveSection(
+        searchParams.get("section") === "applicants"
+          ? "applicants"
+          : searchParams.get("section") === "profile"
+            ? "profile"
+            : "jobs",
+      );
+    });
+  }, [searchParams]);
+
   async function handleLogout() {
     await logout();
     router.replace("/login");
+  }
+
+  function selectSection(section: "jobs" | "applicants" | "profile") {
+    const params = new URLSearchParams(searchParams.toString());
+
+    if (section === "jobs") {
+      params.delete("section");
+    } else {
+      params.set("section", section);
+    }
+
+    if (section !== "applicants") {
+      params.delete("submission_id");
+    }
+
+    setActiveSection(section);
+    router.replace(`/hr${params.size ? `?${params.toString()}` : ""}`, { scroll: false });
   }
 
   if (status !== "authenticated" || user?.account_type !== "hr") {
@@ -68,14 +107,28 @@ export function HrWorkspaceView() {
   return (
     <main className="min-h-screen bg-[#fbfaf4] px-5 py-10 text-[#062b1f] sm:px-6 lg:px-8">
       <div className="mx-auto w-full max-w-7xl">
-        <header className="flex flex-col gap-5 border-b border-[#e8e4d8] pb-7 sm:flex-row sm:items-start sm:justify-between">
-          <div>
-            <p className="text-sm font-semibold text-[#588100]">HR workspace</p>
-            <h1 className="mt-2 text-3xl font-semibold">Welcome, {user?.name}</h1>
-            <p className="mt-3 max-w-xl text-sm leading-6 text-[#657167]">
-              Your company workspace is ready. Job posting and candidate management come next.
-            </p>
-          </div>
+        <header className="sticky top-0 z-20 -mx-5 border-b border-[#e8e4d8]/90 bg-[#fbfaf4]/95 px-5 py-4 backdrop-blur sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8">
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <div className="flex items-center gap-6">
+              <ApplyAiLogo />
+              <div className="hidden h-8 w-px bg-[#d8d5c8] sm:block" />
+              <div className="hidden sm:block">
+                <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[#588100]">HR workspace</p>
+                <p className="mt-1 text-sm font-semibold text-[#20332a]">{company?.name ?? "Company workspace"}</p>
+              </div>
+            </div>
+            <nav className="order-3 flex w-full gap-1 sm:order-none sm:w-auto" aria-label="HR workspace">
+              {(["jobs", "applicants", "profile"] as const).map((section) => (
+                <button
+                  className={`rounded-full px-4 py-2 text-sm font-semibold transition ${activeSection === section ? "bg-[#062b1f] text-[#f7f5ec]" : "text-[#405047] hover:bg-[#eff3df] hover:text-[#062b1f]"}`}
+                  key={section}
+                  onClick={() => selectSection(section)}
+                  type="button"
+                >
+                  {section === "jobs" ? "Job posts" : section === "applicants" ? "Applicants" : "Profile"}
+                </button>
+              ))}
+            </nav>
           <div className="flex items-center gap-2">
             <NotificationBell />
             <button
@@ -86,9 +139,26 @@ export function HrWorkspaceView() {
               Logout
             </button>
           </div>
+          </div>
         </header>
 
-        <section className="mt-8 rounded-[24px] border border-[#e1ded1] bg-white px-6 py-5 shadow-sm">
+        <section className="flex flex-col gap-5 border-b border-[#e8e4d8] py-8 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <p className="text-sm font-semibold text-[#588100]">
+              {activeSection === "jobs" ? "Hiring overview" : activeSection === "applicants" ? "Candidate pipeline" : "Workspace identity"}
+            </p>
+            <h1 className="mt-2 text-3xl font-semibold">Welcome, {user?.name}</h1>
+            <p className="mt-3 max-w-xl text-sm leading-6 text-[#657167]">
+              {activeSection === "jobs"
+                ? "Create roles, control application windows, and keep your hiring workspace organized."
+                : activeSection === "applicants"
+                  ? "Review applicants, inspect match results, and move candidates through your hiring process."
+                  : "Keep your recruiter identity and company workspace details accurate."}
+            </p>
+          </div>
+        </section>
+
+        {activeSection !== "profile" ? <section className="mt-8 rounded-[24px] border border-[#e1ded1] bg-white px-6 py-5 shadow-sm">
           <h2 className="text-sm font-semibold">Company</h2>
           {error ? (
             <div className="mt-5 rounded-2xl border border-[#efc8bf] bg-[#fff7f4] p-4 text-sm font-medium text-[#8b281f]" role="alert">
@@ -111,32 +181,22 @@ export function HrWorkspaceView() {
           ) : (
             <div className="mt-6 h-20 animate-pulse rounded-2xl bg-[#eff3df]" />
           )}
-        </section>
-
-        <div className="mt-7 flex gap-1 border-b border-[#d8d5c8]" role="tablist" aria-label="HR workspace sections">
-          {(["jobs", "applicants"] as const).map((section) => (
-            <button
-              aria-selected={activeSection === section}
-              className={`relative px-5 pb-3 pt-2 text-sm font-semibold capitalize transition ${
-                activeSection === section
-                  ? "text-[#062b1f] after:absolute after:inset-x-2 after:bottom-[-1px] after:h-0.5 after:rounded-full after:bg-[#588100]"
-                  : "text-[#657167] hover:text-[#20332a]"
-              }`}
-              key={section}
-              onClick={() => setActiveSection(section)}
-              role="tab"
-              type="button"
-            >
-              {section}
-            </button>
-          ))}
-        </div>
+        </section> : null}
 
         <section className="mt-6 rounded-[28px] border border-[#e1ded1] bg-white p-6 shadow-sm sm:p-8">
           {activeSection === "jobs" ? (
             <HrJobsPanel />
+          ) : activeSection === "applicants" ? (
+            <HrApplicantsPanel
+              companyId={company?.id}
+              submissionId={Number.isInteger(requestedSubmissionId) && requestedSubmissionId > 0 ? requestedSubmissionId : undefined}
+            />
           ) : (
-            <HrApplicantsPanel companyId={company?.id} />
+            <HrProfilePanel
+              onCompanyRenamed={(name) =>
+                setCompany((current) => current ? { ...current, name } : current)
+              }
+            />
           )}
         </section>
       </div>

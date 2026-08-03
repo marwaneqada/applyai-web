@@ -1,10 +1,15 @@
 import type { Metadata } from "next";
-import { ApplicationsBoardView } from "@/components/app/applications/applications-board-view";
+import { Suspense } from "react";
+import { MyApplicationsView } from "@/components/app/applications/my-applications-view";
 
 export const metadata: Metadata = {
   title: "Applications | ApplyAI",
 };
 
 export default function ApplicationsPage() {
-  return <ApplicationsBoardView />;
+  return (
+    <Suspense fallback={<div className="min-h-[60vh] bg-[#fbfaf4]" />}>
+      <MyApplicationsView />
+    </Suspense>
+  );
 }

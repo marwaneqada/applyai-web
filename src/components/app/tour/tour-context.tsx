@@ -76,11 +76,9 @@ export const TOUR_STEPS: TourStep[] = [
   {
     id: "applications",
     page: "/app/applications",
-    selector: "add-application",
-    title: "Track your applications",
-    body: "Add opportunities to your tracker and move them through each stage. You can create one now or continue the guide.",
-    action: "application_created",
-    optionalHint: "Optional: add an application now, or choose Next.",
+    selector: "applications-overview",
+    title: "Follow your applications",
+    body: "Applications submitted through ApplyAI appear here. Hiring teams manage each stage, and status and match updates arrive automatically.",
   },
   {
     id: "profile",
