@@ -522,15 +522,15 @@ export function HrApplicantsPanel({
         </div>
       ) : null}
 
-      <div className="mt-6 grid gap-5 xl:grid-cols-[minmax(300px,0.72fr)_minmax(0,1.28fr)]">
-        <div className="overflow-hidden rounded-[22px] border border-[#e1ded1]">
+      <div className="mt-6 grid gap-5 xl:h-[calc(100vh-17rem)] xl:min-h-[560px] xl:grid-cols-[minmax(300px,0.72fr)_minmax(0,1.28fr)]">
+        <div className="overflow-hidden rounded-[22px] border border-[#e1ded1] xl:flex xl:min-h-0 xl:flex-col">
           <div className="flex items-center justify-between border-b border-[#e8e4d8] bg-[#fbfaf4] px-4 py-3">
             <p className="text-sm font-semibold">Applicant queue</p>
             <p className="text-xs font-semibold text-[#657167]">
               Page {pagination?.current_page ?? 1}
             </p>
           </div>
-          <div className="max-h-[680px] divide-y divide-[#ece9df] overflow-y-auto">
+          <div className="divide-y divide-[#ece9df] overflow-y-auto xl:min-h-0 xl:flex-1">
             {loading ? (
               <div className="space-y-3 p-3">
                 <div className="h-28 animate-pulse rounded-2xl bg-[#eff3df]" />
@@ -622,7 +622,7 @@ export function HrApplicantsPanel({
           ) : null}
         </div>
 
-        <div className="min-h-[560px] overflow-hidden rounded-[22px] border border-[#e1ded1] bg-white">
+        <div className="min-h-[560px] overflow-hidden rounded-[22px] border border-[#e1ded1] bg-white xl:min-h-0 xl:overflow-y-auto">
           {loading ? (
             <div className="h-full min-h-[560px] animate-pulse bg-[#eff3df]" />
           ) : selected ? (

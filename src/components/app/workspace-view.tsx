@@ -166,7 +166,7 @@ function Panel({ children, className = "" }: { children: ReactNode; className?: 
 }
 
 export function WorkspaceView() {
-  const { token, user } = useAuth();
+  const { token } = useAuth();
   const { start: startTour } = useTour();
   const shouldReduceMotion = useReducedMotion();
   const reduceMotion = shouldReduceMotion === true;
@@ -238,10 +238,8 @@ export function WorkspaceView() {
     analyses.length === 0 &&
     applicationTotal === 0;
 
-  const firstName = user?.name ? user.name.split(" ")[0] : null;
-
   return (
-    <main className="mx-auto w-full max-w-6xl px-5 py-10 sm:px-6 lg:px-8">
+    <main className="w-full max-w-[1280px] px-5 py-8 sm:px-6 lg:ml-12 lg:px-0 lg:py-10">
       <motion.header
         data-tour="workspace-overview"
         {...(reduceMotion
@@ -252,15 +250,9 @@ export function WorkspaceView() {
               transition: { duration: 0.5, ease: motionEase },
             })}
       >
-        <p className="inline-flex rounded-full border border-[#d9e9c5] bg-[#f2ffd4] px-3 py-1.5 text-xs font-semibold text-[#315000]">
-          Workspace
-        </p>
-        <h1 className="mt-5 text-3xl font-semibold text-[#062b1f]">
-          {firstName ? `Welcome back, ${firstName}.` : "Welcome back."}
-        </h1>
+        <h1 className="text-3xl font-semibold text-[#062b1f]">Candidate overview</h1>
         <p className="mt-3 max-w-2xl text-sm leading-6 text-[#657167]">
-          Upload a resume, analyze it against a role, and track every application
-          in one place.
+          Track your resumes, analyses and applications in one place.
         </p>
       </motion.header>
 

@@ -44,6 +44,15 @@ export function NotificationBell() {
     return () => document.removeEventListener("mousedown", close);
   }, []);
 
+  useEffect(() => {
+    function closeForAccountMenu() {
+      setOpen(false);
+    }
+
+    window.addEventListener("applyai:notification-menu-open", closeForAccountMenu);
+    return () => window.removeEventListener("applyai:notification-menu-open", closeForAccountMenu);
+  }, []);
+
   return (
     <div className="relative" ref={ref}>
       <button
@@ -51,7 +60,13 @@ export function NotificationBell() {
         aria-haspopup="dialog"
         aria-label={unreadCount ? `Notifications, ${unreadCount} unread` : "Notifications"}
         className="relative grid size-10 place-items-center rounded-full text-[#405047] transition hover:bg-[#eff3df] hover:text-[#062b1f] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#a6f20f]"
-        onClick={() => setOpen((current) => !current)}
+        onClick={() => {
+          if (!open) {
+            window.dispatchEvent(new Event("applyai:account-menu-open"));
+          }
+
+          setOpen((current) => !current);
+        }}
         type="button"
       >
         <BellIcon />

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { ApiError, createHrJob, deleteHrJob, isUnauthorizedError, listHrJobs, updateHrJob, type HrJob, type JobStatus, type PaginationMeta } from "@/lib/api";
 import { useAuth } from "@/contexts/auth-context";
@@ -13,11 +13,195 @@ const statusStyle: Record<JobStatus, string> = {
   closed: "bg-[#f1eeea] text-[#657167]",
 };
 const jobFilters = [
-  { value: "all", label: "All jobs" },
+  { value: "all", label: "All" },
   { value: "open", label: "Open" },
   { value: "draft", label: "Draft" },
   { value: "closed", label: "Closed" },
 ] as const;
+
+type JobCounts = Record<"all" | JobStatus, number>;
+
+function formatDate(value: string | null) {
+  if (!value) return "Not set";
+
+  const date = new Date(`${value}T00:00:00`);
+  if (Number.isNaN(date.getTime())) return value;
+
+  return new Intl.DateTimeFormat("en", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  }).format(date);
+}
+
+function JobActionsMenu({
+  job,
+  onClose,
+  onDelete,
+}: {
+  job: HrJob;
+  onClose: (job: HrJob) => void;
+  onDelete: (job: HrJob) => void;
+}) {
+  const rootRef = useRef<HTMLDetailsElement>(null);
+
+  useEffect(() => {
+    function closeOnOutsidePress(event: PointerEvent) {
+      if (!rootRef.current?.contains(event.target as Node)) {
+        rootRef.current?.removeAttribute("open");
+      }
+    }
+
+    function closeOnEscape(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        rootRef.current?.removeAttribute("open");
+      }
+    }
+
+    document.addEventListener("pointerdown", closeOnOutsidePress);
+    document.addEventListener("keydown", closeOnEscape);
+
+    return () => {
+      document.removeEventListener("pointerdown", closeOnOutsidePress);
+      document.removeEventListener("keydown", closeOnEscape);
+    };
+  }, []);
+
+  return (
+    <details className="group relative" ref={rootRef}>
+      <summary
+        aria-label={`More actions for ${job.title}`}
+        className="grid size-9 cursor-pointer list-none place-items-center rounded-lg border border-transparent text-[#657167] transition hover:border-[#d7ddd5] hover:bg-[#f7f8f5] hover:text-[#20332a] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#588100] [&::-webkit-details-marker]:hidden"
+      >
+        <svg aria-hidden="true" className="size-4" fill="currentColor" viewBox="0 0 20 20">
+          <circle cx="4" cy="10" r="1.5" />
+          <circle cx="10" cy="10" r="1.5" />
+          <circle cx="16" cy="10" r="1.5" />
+        </svg>
+      </summary>
+      <div className="absolute right-0 top-11 z-10 w-44 rounded-xl border border-[#d7ddd5] bg-white p-1.5 shadow-[0_12px_32px_rgba(17,44,35,0.12)]">
+        {job.status !== "closed" ? (
+          <button
+            className="flex w-full rounded-lg px-3 py-2 text-left text-sm font-medium text-[#405047] transition hover:bg-[#f1f3ef] hover:text-[#20332a]"
+            onClick={() => {
+              rootRef.current?.removeAttribute("open");
+              onClose(job);
+            }}
+            type="button"
+          >
+            Close job
+          </button>
+        ) : null}
+        <button
+          className="flex w-full rounded-lg px-3 py-2 text-left text-sm font-medium text-[#a2382b] transition hover:bg-[#fff6f3]"
+          onClick={() => {
+            rootRef.current?.removeAttribute("open");
+            onDelete(job);
+          }}
+          type="button"
+        >
+          Delete job
+        </button>
+      </div>
+    </details>
+  );
+}
+
+function JobList({
+  editingId,
+  error,
+  jobs,
+  onClose,
+  onDelete,
+  onEdit,
+  statusFilter,
+}: {
+  editingId: number | null;
+  error: string;
+  jobs: HrJob[];
+  onClose: (job: HrJob) => void;
+  onDelete: (job: HrJob) => void;
+  onEdit: (job: HrJob) => void;
+  statusFilter: "all" | JobStatus;
+}) {
+  const visibleJobs = jobs.filter((job) => job.id !== editingId);
+
+  if (!visibleJobs.length && !error) {
+    return (
+      <div className="mt-4 rounded-xl border border-dashed border-[#cfd6cc] bg-white px-5 py-10 text-center">
+        <h3 className="text-sm font-semibold text-[#20332a]">
+          {statusFilter === "all" ? "No job posts yet" : `No ${statusFilter} jobs`}
+        </h3>
+        <p className="mt-1 text-sm leading-6 text-[#6a756d]">
+          {statusFilter === "all"
+            ? "Create your first role when you are ready to start hiring."
+            : "Try another filter or create a new role."}
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="mt-4 grid gap-2.5">
+      {visibleJobs.map((job) => {
+        const skills = job.required_skills ?? [];
+
+        return (
+          <article className="rounded-xl border border-[#dde2db] bg-white p-4 transition hover:border-[#c5cdc2] sm:p-5" key={job.id}>
+            <div className="flex items-start justify-between gap-4">
+              <div className="min-w-0">
+                <h3 className="truncate text-base font-semibold text-[#112c23]">{job.title}</h3>
+                <p className="mt-1 text-sm text-[#6a756d]">{job.location || "Location not set"}</p>
+              </div>
+              <span className={`shrink-0 rounded-md px-2.5 py-1 text-xs font-semibold capitalize ${statusStyle[job.status]}`}>
+                {job.accepting_applications ? "Open" : job.status}
+              </span>
+            </div>
+
+            <p className="mt-3 line-clamp-2 max-w-3xl text-sm leading-6 text-[#526059]">
+              {job.summary || job.description}
+            </p>
+
+            {skills.length ? (
+              <div className="mt-3 flex flex-wrap items-center gap-1.5" aria-label="Required skills">
+                {skills.slice(0, 3).map((skill) => (
+                  <span className="rounded-md bg-[#f0f3ee] px-2 py-1 text-xs font-medium text-[#526059]" key={skill}>
+                    {skill}
+                  </span>
+                ))}
+                {skills.length > 3 ? (
+                  <span className="text-xs font-medium text-[#7a847d]">+{skills.length - 3} more</span>
+                ) : null}
+              </div>
+            ) : null}
+
+            <div className="mt-4 flex flex-col gap-3 border-t border-[#edf0ec] pt-3.5 lg:flex-row lg:items-center lg:justify-between">
+              <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-sm text-[#6a756d]">
+                <span>
+                  <strong className="font-semibold text-[#405047]">Window:</strong>{" "}
+                  {formatDate(job.opens_at)} – {formatDate(job.closes_at)}
+                </span>
+                <span>
+                  <strong className="font-semibold tabular-nums text-[#405047]">{job.submissions_count ?? 0}</strong>{" "}
+                  {(job.submissions_count ?? 0) === 1 ? "applicant" : "applicants"}
+                </span>
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                <Link className="inline-flex h-9 items-center justify-center rounded-lg bg-[#0b3b2c] px-3.5 text-sm font-semibold text-white transition hover:bg-[#062b1f] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#588100]" href={`/hr/jobs/${job.id}`}>
+                  View applicants
+                </Link>
+                <button className="h-9 rounded-lg border border-[#d7ddd5] bg-white px-3.5 text-sm font-semibold text-[#405047] transition hover:border-[#b9c1b7] hover:bg-[#f7f8f5] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#588100]" onClick={() => onEdit(job)} type="button">
+                  Edit
+                </button>
+                <JobActionsMenu job={job} onClose={onClose} onDelete={onDelete} />
+              </div>
+            </div>
+          </article>
+        );
+      })}
+    </div>
+  );
+}
 
 function SkillTags({ label, values, onChange }: { label: string; values: string[]; onChange: (values: string[]) => void }) {
   const [draft, setDraft] = useState("");
@@ -29,6 +213,7 @@ export function HrJobsPanel() {
   const { clearSession, token } = useAuth();
   const [jobs, setJobs] = useState<HrJob[]>([]);
   const [pagination, setPagination] = useState<PaginationMeta | null>(null);
+  const [jobCounts, setJobCounts] = useState<JobCounts | null>(null);
   const [page, setPage] = useState(1);
   const [statusFilter, setStatusFilter] = useState<"all" | JobStatus>("all");
   const [values, setValues] = useState(emptyJob);
@@ -38,6 +223,33 @@ export function HrJobsPanel() {
   const [formError, setFormError] = useState("");
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
+
+  const loadJobCounts = useCallback(async () => {
+    if (!token) return;
+
+    try {
+      const [
+        allJobs,
+        openJobs,
+        draftJobs,
+        closedJobs,
+      ] = await Promise.all([
+        listHrJobs(token, 1, 1),
+        listHrJobs(token, 1, 1, "open"),
+        listHrJobs(token, 1, 1, "draft"),
+        listHrJobs(token, 1, 1, "closed"),
+      ]);
+
+      setJobCounts({
+        all: allJobs.meta.total,
+        open: openJobs.meta.total,
+        draft: draftJobs.meta.total,
+        closed: closedJobs.meta.total,
+      });
+    } catch (cause) {
+      if (isUnauthorizedError(cause)) clearSession();
+    }
+  }, [clearSession, token]);
 
   const load = useCallback(async () => {
     if (!token) return;
@@ -56,6 +268,7 @@ export function HrJobsPanel() {
   }, [clearSession, page, statusFilter, token]);
 
   useEffect(() => { void Promise.resolve().then(load); }, [load]);
+  useEffect(() => { void Promise.resolve().then(loadJobCounts); }, [loadJobCounts]);
 
   function updateDate(field: "opens_at" | "closes_at", value: string) {
     const nextOpensAt = field === "opens_at" ? value : values.opens_at;
@@ -122,13 +335,14 @@ export function HrJobsPanel() {
       delete (payload as { preferredSkills?: string[] }).preferredSkills;
       if (editingId) {
         await updateHrJob(token, editingId, payload);
-        await load();
+        await Promise.all([load(), loadJobCounts()]);
       } else if (page === 1) {
         await createHrJob(token, payload);
-        await load();
+        await Promise.all([load(), loadJobCounts()]);
       } else {
         await createHrJob(token, payload);
         setPage(1);
+        await loadJobCounts();
       }
       setValues(emptyJob); setEditingId(null); setShowForm(false);
     } catch (cause) {
@@ -153,19 +367,33 @@ export function HrJobsPanel() {
       await deleteHrJob(token, job.id);
       if (jobs.length === 1 && page > 1) {
         setPage((current) => current - 1);
+        await loadJobCounts();
       } else {
-        await load();
+        await Promise.all([load(), loadJobCounts()]);
       }
     }
     catch (cause) { setError(cause instanceof ApiError ? cause.message : "We couldn't delete this job."); }
   }
 
+  async function closeJob(job: HrJob) {
+    if (!token || job.status === "closed" || !window.confirm(`Close “${job.title}”? Candidates will no longer be able to apply.`)) return;
+
+    try {
+      await updateHrJob(token, job.id, { status: "closed" });
+      await Promise.all([load(), loadJobCounts()]);
+    } catch (cause) {
+      setError(cause instanceof ApiError ? cause.message : "We couldn't close this job.");
+    }
+  }
+
   return <section>
-    <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-      <div><h2 className="text-xl font-semibold">Job posts</h2><p className="mt-2 text-sm leading-6 text-[#657167]">Create roles and control exactly when candidates can apply.</p></div>
-      <button className="h-11 rounded-full bg-[#062b1f] px-5 text-sm font-semibold text-[#f7f5ec] hover:bg-[#031a13]" onClick={() => { setShowForm((v) => !v); setEditingId(null); setValues(emptyJob); setFormError(""); setFieldErrors({}); }} type="button">{showForm ? "Close editor" : "Create job"}</button>
+    <div className="flex justify-end">
+      <button className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-[#0b3b2c] px-4 text-sm font-semibold text-white transition hover:bg-[#062b1f] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#588100]" onClick={() => { setShowForm((v) => !v); setEditingId(null); setValues(emptyJob); setFormError(""); setFieldErrors({}); }} type="button">
+        <span aria-hidden="true" className="text-lg leading-none">{showForm ? "×" : "+"}</span>
+        {showForm ? "Close editor" : "Create job"}
+      </button>
     </div>
-    {showForm ? <form className="mt-6 grid gap-4 rounded-[24px] border border-[#e1ded1] bg-[#fbfaf4] p-5 sm:grid-cols-2" onSubmit={submit}>
+    {showForm ? <form className="mt-5 grid gap-4 rounded-xl border border-[#d7ddd5] bg-white p-5 sm:grid-cols-2" onSubmit={submit}>
       <h3 className="sm:col-span-2 text-base font-semibold">{editingId ? "Edit job post" : "Create job post"}</h3>
       {formError ? <div className="sm:col-span-2 rounded-xl border border-[#efc8bf] bg-[#fff7f4] px-4 py-3 text-sm font-medium text-[#8b281f]" role="alert">{formError}</div> : null}
       <label className="text-sm font-semibold">Job title<input aria-describedby={fieldErrors.title ? "title-error" : undefined} aria-invalid={Boolean(fieldErrors.title)} className={`mt-2 h-11 w-full rounded-xl border bg-white px-3 font-medium ${fieldErrors.title ? "border-[#c9513f]" : "border-[#d8d5c8]"}`} required value={values.title} onChange={(e) => { setValues({...values,title:e.target.value}); setFieldErrors((current) => { const next = {...current}; delete next.title; return next; }); }}/>{fieldErrors.title ? <span className="mt-1.5 block text-xs font-medium leading-5 text-[#9f2f22]" id="title-error">{fieldErrors.title}</span> : null}</label>
@@ -184,11 +412,11 @@ export function HrJobsPanel() {
       <label className="text-sm font-semibold">Employment type<select className="mt-2 h-11 w-full rounded-xl border border-[#d8d5c8] bg-white px-3 font-medium" value={values.employment_type} onChange={(e) => setValues({...values,employment_type:e.target.value})}><option value="">Not specified</option><option value="full_time">Full-time</option><option value="part_time">Part-time</option><option value="contract">Contract</option><option value="internship">Internship</option></select></label>
       <div className="sm:col-span-2 flex justify-end gap-3"><button className="h-11 rounded-full border border-[#d8d5c8] px-5 text-sm font-semibold" onClick={() => { setShowForm(false); setEditingId(null); setValues(emptyJob); setFormError(""); setFieldErrors({}); }} type="button">Cancel</button><button className="h-11 rounded-full bg-[#062b1f] px-5 text-sm font-semibold text-[#f7f5ec] disabled:opacity-60" disabled={saving} type="submit">{saving ? "Saving..." : editingId ? "Save changes" : "Save job"}</button></div>
     </form> : null}
-    <div className="mt-6 flex flex-wrap gap-2 border-b border-[#e8e4d8] pb-4" aria-label="Filter job posts by status">
+    <div className="mt-5 flex flex-wrap items-center gap-1 border-b border-[#dde2db]" aria-label="Filter job posts by status">
       {jobFilters.map((filter) => (
         <button
           aria-pressed={statusFilter === filter.value}
-          className={`rounded-full px-4 py-2 text-sm font-semibold transition ${statusFilter === filter.value ? "bg-[#062b1f] text-[#f7f5ec]" : "border border-[#d8d5c8] bg-white text-[#405047] hover:border-[#a9c878] hover:bg-[#eff9d1]"}`}
+          className={`relative inline-flex items-center gap-2 border-b-2 px-3 py-2.5 text-sm font-semibold transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-[#588100] ${statusFilter === filter.value ? "border-[#477a1f] text-[#24490f]" : "border-transparent text-[#6a756d] hover:border-[#c9d1c6] hover:text-[#20332a]"}`}
           key={filter.value}
           onClick={() => {
             setStatusFilter(filter.value);
@@ -197,11 +425,22 @@ export function HrJobsPanel() {
           type="button"
         >
           {filter.label}
+          <span className={`rounded-md px-1.5 py-0.5 text-[11px] tabular-nums ${statusFilter === filter.value ? "bg-[#e9f3dd] text-[#315b18]" : "bg-[#ecefeb] text-[#6a756d]"}`}>
+            {jobCounts?.[filter.value] ?? "—"}
+          </span>
         </button>
       ))}
     </div>
-    {error ? <div className="mt-6 rounded-2xl border border-[#efc8bf] bg-[#fff7f4] p-4 text-sm text-[#8b281f]" role="alert"><p className="font-semibold">Jobs are temporarily unavailable</p><p className="mt-1 leading-6">{error}</p><button className="mt-3 font-semibold underline underline-offset-4" onClick={() => void load()} type="button">Try again</button></div> : null}
-    <div className="mt-6 grid gap-3">{jobs.filter((job) => job.id !== editingId).map((job) => <article className="rounded-2xl border border-[#e1ded1] bg-white p-5" key={job.id}><div className="flex flex-wrap items-start justify-between gap-3"><div><h3 className="font-semibold">{job.title}</h3><p className="mt-1 text-sm text-[#657167]">{job.location || "Location not set"}</p></div><div className="flex flex-wrap items-center justify-end gap-2"><span className="rounded-full border border-[#d8d5c8] bg-[#fbfaf4] px-3 py-1 text-xs font-semibold text-[#405047]">{job.submissions_count ?? 0} {(job.submissions_count ?? 0) === 1 ? "applicant" : "applicants"}</span><span className={`rounded-full px-3 py-1 text-xs font-semibold ${statusStyle[job.status]}`}>{job.accepting_applications ? "Accepting applications" : job.status}</span></div></div><p className="mt-3 text-sm leading-6 text-[#405047]">{job.description}</p><div className="mt-4 flex flex-wrap items-center justify-between gap-3"><p className="text-sm font-medium text-[#657167]">Window: {job.opens_at || "not set"} — {job.closes_at || "not set"}</p><div className="flex flex-wrap gap-2"><Link className="rounded-full border border-[#a9c878] bg-[#eff9d1] px-4 py-2 text-sm font-semibold text-[#315000] hover:bg-[#e1edc5]" href={`/hr/jobs/${job.id}`}>Applicants</Link><button className="rounded-full border border-[#d8d5c8] px-4 py-2 text-sm font-semibold hover:bg-[#fbfaf4]" onClick={() => startEdit(job)} type="button">Edit</button><button className="rounded-full px-4 py-2 text-sm font-semibold text-[#9f2f22] hover:bg-[#fff7f4]" onClick={() => void remove(job)} type="button">Delete</button></div></div></article>)}{!jobs.length && !error ? <p className="rounded-2xl bg-[#eff3df] p-5 text-sm leading-6 text-[#405047]">{statusFilter === "all" ? "No jobs yet. Create your first role when you are ready." : `No ${statusFilter} jobs found.`}</p> : null}</div>
-    {pagination && pagination.last_page > 1 ? <nav aria-label="Job post pages" className="mt-5 flex items-center justify-between gap-3 border-t border-[#e8e4d8] pt-5"><button className="h-10 rounded-full border border-[#d8d5c8] bg-white px-4 text-sm font-semibold text-[#405047] transition hover:border-[#a9c878] hover:bg-[#eff9d1] disabled:cursor-not-allowed disabled:opacity-40" disabled={page === 1} onClick={() => setPage((current) => current - 1)} type="button">Previous</button><p className="text-sm font-semibold text-[#657167]">Page {pagination.current_page} of {pagination.last_page} · {pagination.total} jobs</p><button className="h-10 rounded-full border border-[#d8d5c8] bg-white px-4 text-sm font-semibold text-[#405047] transition hover:border-[#a9c878] hover:bg-[#eff9d1] disabled:cursor-not-allowed disabled:opacity-40" disabled={page === pagination.last_page} onClick={() => setPage((current) => current + 1)} type="button">Next</button></nav> : null}
+    {error ? <div className="mt-5 rounded-xl border border-[#efc8bf] bg-[#fff8f6] p-4 text-sm text-[#8b281f]" role="alert"><p className="font-semibold">Jobs are temporarily unavailable</p><p className="mt-1 leading-6">{error}</p><button className="mt-3 font-semibold underline underline-offset-4" onClick={() => void load()} type="button">Try again</button></div> : null}
+    <JobList
+      editingId={editingId}
+      error={error}
+      jobs={jobs}
+      onClose={(job) => void closeJob(job)}
+      onDelete={(job) => void remove(job)}
+      onEdit={startEdit}
+      statusFilter={statusFilter}
+    />
+    {pagination && pagination.last_page > 1 ? <nav aria-label="Job post pages" className="mt-5 flex flex-col items-center justify-between gap-3 border-t border-[#dde2db] pt-4 sm:flex-row"><button className="h-9 rounded-lg border border-[#d7ddd5] bg-white px-3.5 text-sm font-semibold text-[#405047] transition hover:border-[#b9c1b7] hover:bg-[#f7f8f5] disabled:cursor-not-allowed disabled:opacity-40" disabled={page === 1} onClick={() => setPage((current) => current - 1)} type="button">Previous</button><p className="text-sm font-medium text-[#6a756d]">Page {pagination.current_page} of {pagination.last_page} · {pagination.total} jobs</p><button className="h-9 rounded-lg border border-[#d7ddd5] bg-white px-3.5 text-sm font-semibold text-[#405047] transition hover:border-[#b9c1b7] hover:bg-[#f7f8f5] disabled:cursor-not-allowed disabled:opacity-40" disabled={page === pagination.last_page} onClick={() => setPage((current) => current + 1)} type="button">Next</button></nav> : null}
   </section>;
 }
