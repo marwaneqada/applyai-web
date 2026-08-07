@@ -110,7 +110,7 @@ export function HrWorkspaceView() {
         <header className="sticky top-0 z-20 -mx-5 border-b border-[#e8e4d8]/90 bg-[#fbfaf4]/95 px-5 py-4 backdrop-blur sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8">
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div className="flex items-center gap-6">
-              <ApplyAiLogo />
+              <ApplyAiLogo href="/hr" />
               <div className="hidden h-8 w-px bg-[#d8d5c8] sm:block" />
               <div className="hidden sm:block">
                 <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[#588100]">HR workspace</p>

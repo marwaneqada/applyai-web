@@ -325,7 +325,7 @@ export function AuthPage({
         {...cardMotion}
       >
         <motion.div className="flex items-center justify-between gap-4" {...itemMotion}>
-          <ApplyAiLogo />
+          <ApplyAiLogo href="/login" />
           <Link
             className="text-sm font-semibold text-[#405047] transition hover:text-[#062b1f]"
             href="/"

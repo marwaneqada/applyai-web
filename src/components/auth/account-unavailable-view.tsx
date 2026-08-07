@@ -32,7 +32,7 @@ export function AccountUnavailableView() {
   return (
     <main className="grid min-h-screen place-items-center bg-[#fbfaf4] px-5 py-10 text-[#062b1f]">
       <section className="w-full max-w-lg rounded-[28px] border border-[#e1ded1] bg-white p-7 shadow-[0_22px_70px_rgba(6,43,31,0.1)] sm:p-9">
-        <ApplyAiLogo />
+        <ApplyAiLogo href="/login" />
         <h1 className="mt-8 text-3xl font-semibold">This workspace is not available yet</h1>
         <p className="mt-3 text-sm leading-6 text-[#657167]">
           This release supports Candidate accounts. The HR workspace will be introduced separately.

@@ -21,7 +21,7 @@ function LoadingScreen() {
   return (
     <main className="grid min-h-screen place-items-center bg-[#fbfaf4] px-5 text-[#062b1f]">
       <div className="rounded-[28px] border border-[#e1ded1] bg-white px-8 py-6 text-center shadow-sm">
-        <ApplyAiLogo className="justify-center" />
+        <ApplyAiLogo className="justify-center" href="/login" />
         <p className="mt-4 text-sm font-medium text-[#657167]">Checking your session...</p>
       </div>
     </main>
@@ -86,7 +86,7 @@ export function AppShell({ children }: { children: ReactNode }) {
     <div className="min-h-screen bg-[#fbfaf4] text-[#062b1f]">
       <header className="border-b border-[#e8e4d8]/80 bg-[#fbfaf4]/88">
         <div className="mx-auto flex min-h-20 w-full max-w-7xl flex-col gap-4 px-5 py-4 sm:px-6 md:flex-row md:items-center md:justify-between lg:px-8">
-          <ApplyAiLogo />
+          <ApplyAiLogo href="/app" />
           <nav className="flex flex-wrap gap-2" aria-label="Application">
             {navItems.map((item) => {
               const isActive =
